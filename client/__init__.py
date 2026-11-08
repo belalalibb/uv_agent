@@ -1,0 +1,97 @@
+"""AI Gateway Client SDK — Clean, Typed, Platform-Ready Interface."""
+
+from .client import GatewayClient, SyncGatewayClient
+from .config import GatewayConfig
+from .provider_manager import (
+    EnvRouteStorage,
+    FileRouteStorage,
+    MemoryRouteStorage,
+    ProviderInfo,
+    ProviderManager,
+    RouteTokenStorage,
+)
+from .exceptions import (
+    AuthExpiredError,
+    BadRequestError,
+    ContentRejectedError,
+    GatewayError,
+    InvalidCredentialError,
+    ModelUnavailableError,
+    NonRetryableError,
+    ProviderUnavailableError,
+    QuotaExceededError,
+    RateLimitedError,
+    RetryableServerError,
+    RouteNotFoundError,
+    TimeoutError,
+    UnsupportedCapabilityError,
+    create_gateway_error,
+)
+from .models import (
+    AudioOutput,
+    ChatMessage,
+    EmbeddingsOutput,
+    ErrorCategory,
+    ExecutionResult,
+    GatewayOperation,
+    HealthResponse,
+    ImageOutput,
+    ModelInfo,
+    ModerationOutput,
+    ProviderManifest,
+    RerankOutput,
+    SpeechOutput,
+    TextOutput,
+    UsageInfo,
+    VisionOutput,
+)
+from .routes import RouteGroup, SmartRouter
+
+__all__ = [
+    # Clients & Managers
+    "GatewayClient",
+    "SyncGatewayClient",
+    "GatewayConfig",
+    "SmartRouter",
+    "RouteGroup",
+    "ProviderManager",
+    "ProviderInfo",
+    "RouteTokenStorage",
+    "MemoryRouteStorage",
+    "EnvRouteStorage",
+    "FileRouteStorage",
+    # Models
+    "GatewayOperation",
+    "ErrorCategory",
+    "ChatMessage",
+    "UsageInfo",
+    "ExecutionResult",
+    "TextOutput",
+    "ImageOutput",
+    "AudioOutput",
+    "SpeechOutput",
+    "EmbeddingsOutput",
+    "RerankOutput",
+    "ModerationOutput",
+    "VisionOutput",
+    "ProviderManifest",
+    "ModelInfo",
+    "HealthResponse",
+    # Exceptions
+    "GatewayError",
+    "AuthExpiredError",
+    "InvalidCredentialError",
+    "RateLimitedError",
+    "QuotaExceededError",
+    "ModelUnavailableError",
+    "ProviderUnavailableError",
+    "UnsupportedCapabilityError",
+    "BadRequestError",
+    "ContentRejectedError",
+    "TimeoutError",
+    "RetryableServerError",
+    "NonRetryableError",
+    "RouteNotFoundError",
+    "create_gateway_error",
+]
+
