@@ -1,0 +1,74 @@
+{
+  "voyage-3": {
+    "label": "Voyage 3 (Flagship General Text Embeddings)",
+    "context_window": 32000,
+    "dimensions": 1024,
+    "capabilities": {
+      "embeddings": true
+    }
+  },
+  "voyage-3-lite": {
+    "label": "Voyage 3 Lite (High-Speed Low-Latency Embeddings)",
+    "context_window": 32000,
+    "dimensions": 512,
+    "capabilities": {
+      "embeddings": true
+    }
+  },
+  "voyage-multilingual-2": {
+    "label": "Voyage Multilingual 2 (Arabic & Multilingual Embeddings)",
+    "context_window": 32000,
+    "dimensions": 1024,
+    "capabilities": {
+      "embeddings": true
+    }
+  },
+  "voyage-code-3": {
+    "label": "Voyage Code 3 (Code & GitHub Semantic Embeddings)",
+    "context_window": 32000,
+    "dimensions": 1024,
+    "capabilities": {
+      "embeddings": true,
+      "code": true
+    }
+  },
+  "voyage-multimodal-3": {
+    "label": "Voyage Multimodal 3 (Vision & Image-Text Embeddings)",
+    "context_window": 32000,
+    "dimensions": 1024,
+    "capabilities": {
+      "embeddings": true,
+      "vision_input": true
+    }
+  },
+  "voyage-finance-2": {
+    "label": "Voyage Finance 2 (Financial & Banking Domain Embeddings)",
+    "context_window": 32000,
+    "dimensions": 1024,
+    "capabilities": {
+      "embeddings": true
+    }
+  },
+  "voyage-law-2": {
+    "label": "Voyage Law 2 (Legal & Contracts Domain Embeddings)",
+    "context_window": 16000,
+    "dimensions": 1024,
+    "capabilities": {
+      "embeddings": true
+    }
+  },
+  "rerank-2": {
+    "label": "Voyage Rerank 2 (Precision Semantic Cross-Encoder Reranker)",
+    "context_window": 16000,
+    "capabilities": {
+      "rerank": true
+    }
+  },
+  "rerank-2-lite": {
+    "label": "Voyage Rerank 2 Lite (Fast Semantic Reranker)",
+    "context_window": 8000,
+    "capabilities": {
+      "rerank": true
+    }
+  }
+}

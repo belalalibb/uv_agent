@@ -1,0 +1,72 @@
+{
+  "parallel-chat": {
+    "ai_name": "parallel",
+    "label": "Parallel AI Reasoning Chat",
+    "capabilities": {
+      "thinking": true,
+      "planning": true,
+      "deep_research": false,
+      "web_explorer": true,
+      "files": true,
+      "images": false,
+      "system_message": true,
+      "streaming": true
+    }
+  },
+  "parallel-search": {
+    "ai_name": "parallel",
+    "label": "Parallel AI Web Search",
+    "capabilities": {
+      "thinking": false,
+      "planning": false,
+      "deep_research": false,
+      "web_explorer": true,
+      "files": false,
+      "images": false,
+      "system_message": false,
+      "streaming": false
+    }
+  },
+  "parallel-extract": {
+    "ai_name": "parallel",
+    "label": "Parallel AI Document & URL Extractor",
+    "capabilities": {
+      "thinking": false,
+      "planning": false,
+      "deep_research": false,
+      "web_explorer": true,
+      "files": true,
+      "images": false,
+      "system_message": false,
+      "streaming": false
+    }
+  },
+  "parallel-research": {
+    "ai_name": "parallel",
+    "label": "Parallel AI Deep Research Agent",
+    "capabilities": {
+      "thinking": true,
+      "planning": true,
+      "deep_research": true,
+      "web_explorer": true,
+      "files": true,
+      "images": false,
+      "system_message": true,
+      "streaming": false
+    }
+  },
+  "default": {
+    "ai_name": "parallel",
+    "label": "Parallel AI Reasoning Chat (Default)",
+    "capabilities": {
+      "thinking": true,
+      "planning": true,
+      "deep_research": false,
+      "web_explorer": true,
+      "files": true,
+      "images": false,
+      "system_message": true,
+      "streaming": true
+    }
+  }
+}

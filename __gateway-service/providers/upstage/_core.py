@@ -1,0 +1,591 @@
+"""Upstage AI Core Engine — Layer 1 (Autonomous 3-Function Capsule).
+
+Compliance: Bolla Constitution v1.2 & Gateway Contracts ADR-0008.
+- Autonomous 3-function capsule: register(), refresh(), ask().
+- Dynamic integration with external `__دومينات مؤقته` library with random provider rotation.
+- FileLock concurrency protection (15s timeout) on accounts_upstage.json.
+- Pure Python in-process execution with SSE streaming & Next.js Vercel AI SDK decoding.
+- Mockable transport via _TRANSPORT_OVERRIDE for hermetic unit testing.
+"""
+
+from __future__ import annotations
+
+import importlib.util
+import json
+import os
+import random
+import re
+import sys
+import time
+import urllib.parse
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
+
+import httpx
+
+try:
+    from filelock import FileLock, Timeout as LockTimeout
+except ImportError:
+    FileLock = None
+    LockTimeout = TimeoutError
+
+# Mock transport hook for hermetic testing
+_TRANSPORT_OVERRIDE: Any | None = None
+
+
+def set_transport_override(transport: Any | None) -> None:
+    """Set or clear the mock transport override for unit testing."""
+    global _TRANSPORT_OVERRIDE
+    _TRANSPORT_OVERRIDE = transport
+
+
+class UpstreamFailure(Exception):
+    """Canonical internal exception carrying normalized category and diagnostics."""
+
+    def __init__(
+        self,
+        category: str,
+        message: str,
+        retry_after_ms: int | None = None,
+        provider_code: str | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.category = category
+        self.message = message
+        self.retry_after_ms = retry_after_ms
+        self.provider_code = provider_code
+
+
+# --------------------------------------------------------------------------- #
+# Constants & Defaults                                                        #
+# --------------------------------------------------------------------------- #
+
+DEFAULT_PASSWORD = "Passw0rdUpstage2026!#"
+
+HEADERS_BROWSER = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36",
+    "Accept": "*/*",
+    "Accept-Language": "en-US,en;q=0.9,ar;q=0.8",
+}
+
+SAMPLE_ASF = "eyJwYXlsb2FkIjoie1wiY29udGV4dERhdGFcIjp7XCJVc2VyQWdlbnRcIjpcIk1vemlsbGEvNS4wIChXaW5kb3dzIE5UIDEwLjA7IFdpbjY0OyB4NjQpIEFwcGxlV2ViS2l0LzUzNy4zNiAoS0hUTUwsIGxpa2UgR2Vja28pIENocm9tZS8xNTMuMC4wLjAgU2FmYXJpLzUzNy4zNlwiLFwiRGV2aWNlSWRcIjpcInNjdjc2bW1wOGh4bWxmajY6MTc5MDAwNTMyOTE3OVwiLFwiRGV2aWNlTGFuZ3VhZ2VcIjpcImVuLVVTXCIsXCJEZXZpY2VGaW5nZXJwcmludFwiOlwiTW96aWxsYS81LjAgKFdpbmRvd3MgTlQgMTAuMDsgV2luNjQ7IHg2NCkgQXBwbGVXZWJLaXQvNTM3LjM2IChLSFRNTCwgbGlrZSBHZWNrbykgQ2hyb21lLzE1My4wLjAuMCBTYWZhcmkvNTM3LjM2UERGIFZpZXdlcjpDaHJvbWUgUERGIFZpZXdlcjpDaHJvbWl1bSBQREYgVmlld2VyOk1pY3Jvc29mdCBFZGdlIFBERiBWaWV3ZXI6V2ViS2l0IGJ1aWx0LWluIFBERjplbi1VU1wiLFwiRGV2aWNlUGxhdGZvcm1cIjpcIldpbjMyXCIsXCJDbGllbnRUaW1lem9uZVwiOlwiMDM6MDBcIn0sXCJ1c2VybmFtZVwiOlwiaG9jdG8uYXBuZ28uYW5AZ21haWwuY29tXCIsXCJ1c2VyUG9vbElkXCI6XCJcIixcInRpbWVzdGFtcFwiOlwiMTc5MDAwNTM3OTg5MFwifSIsInNpZ25hdHVyZSI6ImVtTnB1eHExclpCaFFEYXk1OFdCemsxTWNsTjl0NmJQY0lJMTdJQ2FCOTA9IiwidmVyc2lvbiI6IlRTMjAyNDA4MTEifQ=="
+
+AVAILABLE_MODELS = [
+    "auto",
+    "solar-pro4",
+    "solar-docvision",
+    "gpt-5.4-openai",
+]
+
+WORKING_MAIL_PROVIDERS = [
+    "tempnet",
+    "emailnator",
+    "mailtm",
+    "inboxes",
+    "mailnesia",
+]
+
+_METADATA_FILE = Path(__file__).resolve().parent / "models_metadata.json"
+try:
+    with open(_METADATA_FILE, "r", encoding="utf-8") as _mf:
+        MODELS_METADATA: dict[str, Any] = json.load(_mf)
+except Exception:
+    MODELS_METADATA = {}
+
+
+def is_vision_model(model: str | None) -> bool:
+    """Check if the given model supports images/vision input according to metadata."""
+    if not model or model == "auto":
+        return True
+    model_info = MODELS_METADATA.get(model)
+    if not model_info:
+        return model in ("solar-docvision", "gpt-5.4-openai")
+    caps = model_info.get("capabilities", {})
+    return bool(caps.get("images", False))
+
+
+# --------------------------------------------------------------------------- #
+# Dynamic Discovery of __دومينات مؤقته                                         #
+# --------------------------------------------------------------------------- #
+
+def discover_temp_domains_root() -> Path | None:
+    """Dynamically discover the `__دومينات مؤقته` directory in workspace roots."""
+    current = Path(__file__).resolve()
+    for parent in [current] + list(current.parents):
+        cand = parent / "__دومينات مؤقته"
+        if cand.is_dir() and (cand / "providers").is_dir():
+            return cand
+    env_alt = os.environ.get("DOMAINS_ROOT")
+    if env_alt:
+        alt_path = Path(env_alt)
+        if alt_path.is_dir() and (alt_path / "providers").is_dir():
+            return alt_path
+    return None
+
+
+def get_random_temp_email_provider(preferred: str = "random") -> tuple[Any | None, str]:
+    """Dynamically load and return a temp email provider randomly without hardcoding."""
+    root = discover_temp_domains_root()
+    if not root:
+        return None, ""
+
+    if str(root) not in sys.path:
+        sys.path.insert(0, str(root))
+
+    candidates = list(WORKING_MAIL_PROVIDERS)
+    random.shuffle(candidates)
+    if preferred and preferred != "random" and preferred in candidates:
+        candidates.remove(preferred)
+        candidates.insert(0, preferred)
+
+    provider_classes = {
+        "tempnet": ("tempnet.py", "TempNetProvider"),
+        "emailnator": ("emailnator.py", "EmailnatorProvider"),
+        "mailtm": ("mailtm.py", "MailTmProvider"),
+        "inboxes": ("inboxes.py", "InboxesProvider"),
+        "mailnesia": ("mailnesia.py", "MailnesiaProvider"),
+    }
+
+    for prov_key in candidates:
+        filename, cls_name = provider_classes.get(prov_key, (None, None))
+        if not filename:
+            continue
+        mod_path = root / "providers" / filename
+        if mod_path.is_file():
+            try:
+                spec = importlib.util.spec_from_file_location(f"temp_{prov_key}", str(mod_path))
+                if spec and spec.loader:
+                    mod = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(mod)
+                    if hasattr(mod, cls_name):
+                        instance = getattr(mod, cls_name)()
+                        return instance, prov_key
+            except Exception:
+                continue
+
+    return None, ""
+
+
+# --------------------------------------------------------------------------- #
+# Account Pool Storage & Concurrency Safety                                   #
+# --------------------------------------------------------------------------- #
+
+def get_accounts_file_path() -> Path:
+    """Resolve the accounts pool file path with environment override."""
+    env_override = os.environ.get("GW_UPSTAGE_ACCOUNTS_FILE")
+    if env_override:
+        return Path(env_override)
+    return Path(__file__).resolve().parent / "accounts_upstage.json"
+
+
+def _load_accounts() -> list[dict[str, Any]]:
+    path = get_accounts_file_path()
+    if not path.is_file():
+        return []
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return data if isinstance(data, list) else []
+    except Exception:
+        return []
+
+
+def _save_accounts(accounts: list[dict[str, Any]]) -> None:
+    path = get_accounts_file_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(accounts, f, ensure_ascii=False, indent=2)
+
+
+def get_active_session() -> str | None:
+    """Read the active session token from the account pool."""
+    accounts = _load_accounts()
+    if accounts:
+        return accounts[0].get("session") or accounts[0].get("session_cookie")
+    return None
+
+
+# --------------------------------------------------------------------------- #
+# Layer 1 Autonomous Functions: register(), refresh(), ask()                   #
+# --------------------------------------------------------------------------- #
+
+def register(
+    preferred_provider: str = "random",
+    password: str = DEFAULT_PASSWORD,
+    timeout_s: float = 30.0,
+) -> dict[str, Any]:
+    """Autonomous account factory via AWS Cognito OAuth and dynamic temp mail."""
+    # Obtain dynamic temp email
+    mail_prov, prov_name = get_random_temp_email_provider(preferred=preferred_provider)
+    if not mail_prov:
+        raise UpstreamFailure("provider_unavailable", "No temp email provider available")
+
+    try:
+        email_obj = mail_prov.create_email()
+    except Exception as e:
+        raise UpstreamFailure("provider_unavailable", f"Temp mail creation failed: {e}")
+
+    email_addr = getattr(email_obj, "email", "")
+    if not email_addr:
+        raise UpstreamFailure("provider_unavailable", "Failed to obtain temp email address")
+
+    transport = _TRANSPORT_OVERRIDE
+    client = httpx.Client(headers=HEADERS_BROWSER, follow_redirects=False, transport=transport, timeout=timeout_s)
+
+    try:
+        # 1. Start OAuth login handshake
+        login_init_url = "https://studio.upstage.ai/api/auth/login"
+        r_login = client.get(login_init_url)
+        target_authorize = r_login.headers.get("Location", "")
+        if not target_authorize:
+            raise UpstreamFailure("bad_request", "OAuth initiate returned no Location header")
+
+        parsed = urllib.parse.urlparse(target_authorize)
+        cognito_domain = f"{parsed.scheme}://{parsed.netloc}"
+
+        # 2. Get CSRF token from signup page
+        signup_page_url = f"{cognito_domain}/signup?{parsed.query}"
+        r_page = client.get(signup_page_url)
+        csrf_match = re.search(r'name="_csrf"\s+value="([^"]+)"', r_page.text)
+        csrf = csrf_match.group(1) if csrf_match else client.cookies.get("XSRF-TOKEN", "")
+
+        # 3. Post Signup to Cognito
+        payload_signup = {
+            "_csrf": csrf,
+            "cognitoAsfData": SAMPLE_ASF,
+            "username": email_addr,
+            "password": password,
+            "given_name": email_addr.split("@")[0].replace(".", " ").title(),
+            "family_name": "Upstage",
+            "custom:agree_terms": "true",
+        }
+        headers_post = {
+            "Origin": cognito_domain,
+            "Referer": signup_page_url,
+            "Content-Type": "application/x-www-form-urlencoded",
+        }
+        r_sub = client.post(f"{cognito_domain}/signup?{parsed.query}", data=payload_signup, headers=headers_post)
+        if r_sub.status_code not in [200, 302]:
+            raise UpstreamFailure("non_retryable_error", f"Cognito signup rejected: {r_sub.status_code}")
+
+        # 4. Poll OTP from mailbox
+        otp_code = None
+        for _ in range(12):
+            time.sleep(3)
+            try:
+                msgs = mail_prov.get_messages(email_obj)
+                if msgs:
+                    for m in msgs:
+                        txt = str(getattr(m, "content", "") or "") + " " + str(getattr(m, "subject", "") or "")
+                        found = re.findall(r'\b\d{6}\b', txt)
+                        if found:
+                            otp_code = found[0]
+                            break
+                if otp_code:
+                    break
+            except Exception:
+                pass
+
+        if not otp_code:
+            raise UpstreamFailure("timeout", "OTP verification code timeout")
+
+        # 5. Confirm SignUp
+        r_cpage = client.get(f"{cognito_domain}/confirmSignUp?{parsed.query}")
+        csrf_c = re.search(r'name="_csrf"\s+value="([^"]+)"', r_cpage.text)
+        csrf_confirm = csrf_c.group(1) if csrf_c else csrf
+
+        payload_confirm = {
+            "_csrf": csrf_confirm,
+            "cognitoAsfData": SAMPLE_ASF,
+            "username": email_addr,
+            "confirmation_code": otp_code,
+        }
+        client.post(f"{cognito_domain}/confirmSignUp?{parsed.query}", data=payload_confirm, headers=headers_post)
+
+        # 6. Login
+        login_post_url = f"{cognito_domain}/login?{parsed.query}"
+        r_lpage = client.get(login_post_url)
+        csrf_l = re.search(r'name="_csrf"\s+value="([^"]+)"', r_lpage.text)
+        csrf_login = csrf_l.group(1) if csrf_l else csrf_confirm
+
+        payload_login = {
+            "_csrf": csrf_login,
+            "cognitoAsfData": SAMPLE_ASF,
+            "username": email_addr,
+            "password": password,
+        }
+        r_auth = client.post(login_post_url, data=payload_login, headers=headers_post)
+        redirect_step1 = r_auth.headers.get("Location")
+        if not redirect_step1:
+            raise UpstreamFailure("auth_expired", "Login callback missing after confirmation")
+
+        r_redir = client.get(redirect_step1)
+        callback_url = r_redir.headers.get("Location") or redirect_step1
+
+        client.get(callback_url)
+        session_cookie = client.cookies.get("session", domain="studio.upstage.ai") or client.cookies.get("session")
+
+        if not session_cookie:
+            raise UpstreamFailure("invalid_credential", "Failed to obtain Upstage session cookie")
+
+        # 7. Accept terms via Next.js Server Action
+        terms_url = "https://studio.upstage.ai/agents"
+        terms_headers = {
+            "accept": "text/x-component",
+            "content-type": "text/plain;charset=UTF-8",
+            "next-action": "40d8aa32d12bdb4785a888a8fa09eac028ead2dbd5",
+            "origin": "https://studio.upstage.ai",
+            "referer": "https://studio.upstage.ai/agents",
+        }
+        terms_body = '[[{"term_name":"SERVICE_AGREEMENT","term_version":"1.0"},{"term_name":"PRIVACY_POLICY","term_version":"1.0"},{"term_name":"ADULT_CHECK","term_version":"1.0"},{"term_name":"MARKETING_AGREEMENT","term_version":"1.0"}]]'
+        try:
+            client.post(terms_url, headers=terms_headers, content=terms_body)
+        except Exception:
+            pass
+
+        account_record = {
+            "email": email_addr,
+            "password": password,
+            "session": session_cookie,
+            "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "provider": prov_name,
+        }
+
+        # Concurrency-safe persistence
+        lock_path = get_accounts_file_path().with_suffix(".lock")
+        if FileLock:
+            with FileLock(str(lock_path), timeout=15):
+                accs = _load_accounts()
+                accs.insert(0, account_record)
+                _save_accounts(accs)
+        else:
+            accs = _load_accounts()
+            accs.insert(0, account_record)
+            _save_accounts(accs)
+
+        return account_record
+
+    finally:
+        client.close()
+
+
+def refresh(session_cookie: str | None = None, auto_rotate: bool = True) -> str:
+    """Validate current session cookie or autonomously rotate account."""
+    current = session_cookie or get_active_session()
+    if current:
+        transport = _TRANSPORT_OVERRIDE
+        client = httpx.Client(headers=HEADERS_BROWSER, transport=transport, timeout=10.0)
+        client.cookies.set("session", current, domain="studio.upstage.ai")
+        try:
+            r = client.get("https://studio.upstage.ai/api/v1/auth/user")
+            if r.status_code == 200:
+                client.close()
+                return current
+        except Exception:
+            pass
+        finally:
+            client.close()
+
+    if auto_rotate:
+        new_acc = register()
+        return new_acc["session"]
+
+    raise UpstreamFailure("auth_expired", "Upstage session expired and rotation disabled")
+
+
+def upload_file_bytes(
+    data: bytes,
+    filename: str = "image.png",
+    mime_type: str = "image/png",
+    session_cookie: str | None = None,
+    timeout_s: float = 60.0,
+) -> str:
+    """Upload file bytes to Upstage Studio /api/studio-chat/files and return file_id."""
+    active_session = session_cookie or get_active_session()
+    if not active_session:
+        active_session = refresh(auto_rotate=True)
+
+    transport = _TRANSPORT_OVERRIDE
+    client = httpx.Client(headers=HEADERS_BROWSER, transport=transport, timeout=timeout_s)
+    client.headers.update({
+        "Origin": "https://studio.upstage.ai",
+        "Referer": "https://studio.upstage.ai/",
+    })
+    client.cookies.set("session", active_session, domain="studio.upstage.ai")
+
+    try:
+        files = {"file": (filename, data, mime_type)}
+        r = client.post(
+            "https://studio.upstage.ai/api/studio-chat/files",
+            files=files,
+            data={"purpose": "user_data"},
+        )
+        if r.status_code in (401, 403):
+            active_session = refresh(auto_rotate=True)
+            client.cookies.set("session", active_session, domain="studio.upstage.ai")
+            r = client.post(
+                "https://studio.upstage.ai/api/studio-chat/files",
+                files=files,
+                data={"purpose": "user_data"},
+            )
+
+        if r.status_code != 200:
+            if r.status_code in (401, 403):
+                raise UpstreamFailure("auth_expired", "Upstage credentials rejected during file upload")
+            if r.status_code == 415:
+                raise UpstreamFailure("unsupported_capability", f"Unsupported file type: {filename}")
+            if r.status_code == 429:
+                raise UpstreamFailure("rate_limited", "Upstage upload rate limit reached", retry_after_ms=5000)
+            if r.status_code >= 500:
+                raise UpstreamFailure("retryable_server_error", f"Upstage upload server error {r.status_code}")
+            raise UpstreamFailure("bad_request", f"Upstage file upload failed with status {r.status_code}")
+
+        file_meta = r.json()
+        file_id = file_meta.get("id")
+        if not file_id:
+            raise UpstreamFailure("non_retryable_error", "Upstage upload response missing file id")
+        return str(file_id)
+
+    except httpx.TimeoutException as e:
+        raise UpstreamFailure("timeout", f"Upstage upload call timed out: {e}") from e
+    except httpx.RequestError as e:
+        raise UpstreamFailure("provider_unavailable", f"Upstage upload network failure: {e}") from e
+    finally:
+        client.close()
+
+
+def ask(
+    messages: list[dict[str, Any]] | str,
+    model: str = "auto",
+    session_cookie: str | None = None,
+    timeout_s: float = 60.0,
+    file_ids: list[str] | None = None,
+    files_meta: list[dict[str, str]] | None = None,
+) -> dict[str, Any]:
+    """Execute text generation against Upstage Studio with streaming assembly."""
+    # Resolve Model
+    chosen_model = model
+    if chosen_model == "random":
+        chosen_model = random.choice([m for m in AVAILABLE_MODELS if m != "auto"])
+    elif chosen_model not in AVAILABLE_MODELS:
+        chosen_model = "auto"
+
+    active_session = session_cookie or get_active_session()
+    if not active_session:
+        active_session = refresh(auto_rotate=True)
+
+    # Format user prompt
+    if isinstance(messages, str):
+        prompt = messages
+        chat_title = prompt[:30].replace("\n", " ") or "Chat"
+    elif isinstance(messages, list) and messages:
+        last_user = next((m.get("content", "") for m in reversed(messages) if m.get("role") == "user"), "")
+        prompt = last_user or messages[-1].get("content", "Hello")
+        chat_title = prompt[:30].replace("\n", " ") or "Chat"
+    else:
+        raise UpstreamFailure("bad_request", "Invalid messages format")
+
+    if file_ids:
+        fname = files_meta[0].get("name", "image.png") if files_meta else "image.png"
+        if not prompt.startswith("[Attached:"):
+            prompt = f"[Attached: {fname}]\n\n{prompt}"
+
+    transport = _TRANSPORT_OVERRIDE
+    client = httpx.Client(headers=HEADERS_BROWSER, transport=transport, timeout=timeout_s)
+    client.headers.update({
+        "Origin": "https://studio.upstage.ai",
+        "Referer": "https://studio.upstage.ai/",
+    })
+    client.cookies.set("session", active_session, domain="studio.upstage.ai")
+
+    try:
+        # 1. Create chat
+        payload_chat = {
+            "title": chat_title,
+            "model": chosen_model,
+            "messages": [{"role": "user", "content": prompt}],
+        }
+        r_c = client.post("https://studio.upstage.ai/api/chats", json=payload_chat)
+        if r_c.status_code in (401, 403):
+            # Session expired, rotate once
+            active_session = refresh(auto_rotate=True)
+            client.cookies.set("session", active_session, domain="studio.upstage.ai")
+            r_c = client.post("https://studio.upstage.ai/api/chats", json=payload_chat)
+
+        if r_c.status_code not in (200, 201):
+            if r_c.status_code in (401, 403):
+                raise UpstreamFailure("auth_expired", "Upstage credentials rejected")
+            if r_c.status_code == 429:
+                raise UpstreamFailure("rate_limited", "Upstage rate limit exceeded", retry_after_ms=5000)
+            if r_c.status_code >= 500:
+                raise UpstreamFailure("retryable_server_error", f"Upstage server error {r_c.status_code}")
+            raise UpstreamFailure("bad_request", f"Upstage chat creation failed: {r_c.status_code}")
+
+        chat_id = r_c.json().get("chat", {}).get("id")
+
+        # 2. Stream generation
+        payload_msg: dict[str, Any] = {
+            "chatId": chat_id,
+            "messages": [{"role": "user", "content": prompt}],
+            "model": chosen_model,
+            "locale": "en",
+            "timezone": "Africa/Cairo",
+        }
+        if file_ids:
+            payload_msg["fileIds"] = file_ids
+            payload_msg["files"] = files_meta or [{"id": fid, "name": "attachment"} for fid in file_ids]
+
+        full_text_chunks: list[str] = []
+        with client.stream("POST", "https://studio.upstage.ai/api/chat/pi", json=payload_msg) as r_pi:
+            if r_pi.status_code != 200:
+                if r_pi.status_code in (401, 403):
+                    raise UpstreamFailure("auth_expired", "Upstage session rejected during streaming")
+                if r_pi.status_code == 429:
+                    raise UpstreamFailure("rate_limited", "Upstage streaming rate limit reached", retry_after_ms=5000)
+                if r_pi.status_code >= 500:
+                    raise UpstreamFailure("retryable_server_error", f"Upstage streaming server error {r_pi.status_code}")
+                raise UpstreamFailure("non_retryable_error", f"Upstage stream failed: {r_pi.status_code}")
+
+            for line in r_pi.iter_lines():
+                if not line:
+                    continue
+                raw = line.strip()
+                # Next.js Vercel stream format: 0:"..."
+                if raw.startswith('0:"'):
+                    try:
+                        full_text_chunks.append(json.loads(raw[2:]))
+                    except Exception:
+                        full_text_chunks.append(raw[2:-1])
+                elif raw.startswith("data: "):
+                    ev_str = raw[6:].strip()
+                    if ev_str == "[DONE]":
+                        break
+                    try:
+                        ev = json.loads(ev_str)
+                        if ev.get("type") == "text-delta":
+                            full_text_chunks.append(ev.get("textDelta", ""))
+                        elif "content" in ev and isinstance(ev["content"], str):
+                            full_text_chunks.append(ev["content"])
+                    except Exception:
+                        pass
+
+        generated_text = "".join(full_text_chunks)
+        prompt_tokens = max(1, len(prompt) // 4)
+        completion_tokens = max(1, len(generated_text) // 4)
+
+        return {
+            "text": generated_text,
+            "model": chosen_model,
+            "usage": {
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": prompt_tokens + completion_tokens,
+            },
+        }
+
+    except httpx.TimeoutException as e:
+        raise UpstreamFailure("timeout", f"Upstage connection timeout: {e}")
+    except httpx.RequestError as e:
+        raise UpstreamFailure("provider_unavailable", f"Upstage network unreachable: {e}")
+    finally:
+        client.close()

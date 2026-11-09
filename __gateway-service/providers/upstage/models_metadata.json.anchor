@@ -1,0 +1,22 @@
+{
+  "auto": {
+    "display_name": "Upstage Auto",
+    "context_window": 131072,
+    "description": "Upstage Studio Auto Model Routing"
+  },
+  "solar-pro4": {
+    "display_name": "Solar Pro 4",
+    "context_window": 131072,
+    "description": "Upstage Solar Pro 4 Foundation Model"
+  },
+  "solar-docvision": {
+    "display_name": "Solar Docvision",
+    "context_window": 131072,
+    "description": "Upstage Solar Docvision Document OCR & Vision Model"
+  },
+  "gpt-5.4-openai": {
+    "display_name": "GPT-5.4",
+    "context_window": 131072,
+    "description": "GPT-5.4 OpenAI Engine in Upstage Studio"
+  }
+}

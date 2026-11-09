@@ -1,0 +1,44 @@
+{
+  "runpod-console-gpt4": {
+    "ai_name": "runpod_console",
+    "label": "RunPod Console Assistant (GPT-4)",
+    "capabilities": {
+      "thinking": false,
+      "planning": true,
+      "deep_research": false,
+      "web_explorer": false,
+      "files": true,
+      "images": true,
+      "system_message": true,
+      "streaming": true
+    }
+  },
+  "runpod-console-vision": {
+    "ai_name": "runpod_console",
+    "label": "RunPod Console Vision",
+    "capabilities": {
+      "thinking": false,
+      "planning": true,
+      "deep_research": false,
+      "web_explorer": false,
+      "files": true,
+      "images": true,
+      "system_message": true,
+      "streaming": true
+    }
+  },
+  "default": {
+    "ai_name": "runpod_console",
+    "label": "RunPod Console Default",
+    "capabilities": {
+      "thinking": false,
+      "planning": true,
+      "deep_research": false,
+      "web_explorer": false,
+      "files": true,
+      "images": true,
+      "system_message": true,
+      "streaming": true
+    }
+  }
+}

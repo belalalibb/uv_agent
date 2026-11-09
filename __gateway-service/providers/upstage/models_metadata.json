@@ -1,0 +1,50 @@
+{
+  "auto": {
+    "display_name": "Upstage Auto",
+    "context_window": 131072,
+    "description": "Upstage Studio Auto Model Routing",
+    "capabilities": {
+      "images": true,
+      "files": true,
+      "code": true,
+      "thinking": true,
+      "web_explorer": true
+    }
+  },
+  "solar-pro4": {
+    "display_name": "Solar Pro 4",
+    "context_window": 131072,
+    "description": "Upstage Solar Pro 4 Foundation Model",
+    "capabilities": {
+      "images": false,
+      "files": true,
+      "code": true,
+      "thinking": true,
+      "web_explorer": true
+    }
+  },
+  "solar-docvision": {
+    "display_name": "Solar Docvision",
+    "context_window": 131072,
+    "description": "Upstage Solar Docvision Document OCR & Vision Model",
+    "capabilities": {
+      "images": true,
+      "files": true,
+      "code": true,
+      "thinking": true,
+      "web_explorer": true
+    }
+  },
+  "gpt-5.4-openai": {
+    "display_name": "GPT-5.4",
+    "context_window": 131072,
+    "description": "GPT-5.4 OpenAI Engine in Upstage Studio",
+    "capabilities": {
+      "images": true,
+      "files": true,
+      "code": true,
+      "thinking": true,
+      "web_explorer": true
+    }
+  }
+}

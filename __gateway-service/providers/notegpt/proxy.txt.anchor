@@ -1,0 +1,10 @@
+# ==============================================================================
+# 🌐 Proxy Configuration File for NoteGPT (Pure HTTP/S Engine)
+# ==============================================================================
+# Supported formats (one per line):
+#   http://username:password@ip:port
+#   http://ip:port
+#   socks5://ip:port
+#
+# If empty or lines begin with #, direct connection with dynamic IP spoofing is used.
+# ==============================================================================

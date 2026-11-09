@@ -1,0 +1,20 @@
+{
+  "kimi-k3": {
+    "display_name": "Moonshot Kimi K3 (Agent Mode)",
+    "context_window": 128000,
+    "max_output_tokens": 8192,
+    "description": "High-context reasoning and code generation in agent sandbox mode"
+  },
+  "deepseek-v4-flash": {
+    "display_name": "DeepSeek V4 Flash (Agent Mode)",
+    "context_window": 128000,
+    "max_output_tokens": 8192,
+    "description": "Ultra-fast code generation and Daytona sandbox execution"
+  },
+  "text-to-speech": {
+    "display_name": "NoteGPT Neural Text-to-Speech",
+    "context_window": 4096,
+    "max_output_tokens": 4096,
+    "description": "High-fidelity neural Arabic and multilingual speech synthesis"
+  }
+}

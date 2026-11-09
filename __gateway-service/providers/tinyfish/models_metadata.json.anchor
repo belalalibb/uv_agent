@@ -1,0 +1,106 @@
+{
+  "mako": {
+    "context_window": 128000,
+    "display_name": "TinyFish Mako (Flagship Web Agent)",
+    "description": "Primary autonomous web navigation, perception, and DOM execution agent (V2 Mako engine)",
+    "capabilities": {
+      "chat": true,
+      "reasoning": true,
+      "browser": true,
+      "vision_input": true,
+      "tool_use": true,
+      "agent_module": true
+    }
+  },
+  "eva": {
+    "context_window": 128000,
+    "display_name": "TinyFish EVA Core Engine",
+    "description": "Internal core reasoning and task execution engine (model-owned-eva-amd)",
+    "capabilities": {
+      "chat": true,
+      "reasoning": true,
+      "browser": true,
+      "vision_input": true,
+      "tool_use": true,
+      "agent_module": true
+    }
+  },
+  "browser-agent": {
+    "context_window": 128000,
+    "display_name": "TinyFish Autonomous Browser Agent",
+    "description": "Autonomous cloud browser agent for multi-step browser workflows",
+    "capabilities": {
+      "chat": true,
+      "reasoning": true,
+      "browser": true,
+      "vision_input": true,
+      "tool_use": true,
+      "agent_module": true
+    }
+  },
+  "stealth-agent": {
+    "context_window": 128000,
+    "display_name": "TinyFish Stealth Anti-Detection Agent",
+    "description": "Anti-detection stealth browser agent with residential proxy routing and fingerprint evasion",
+    "capabilities": {
+      "chat": true,
+      "reasoning": true,
+      "browser": true,
+      "vision_input": true,
+      "tool_use": true,
+      "agent_module": true
+    }
+  },
+  "tetra-engine": {
+    "context_window": 128000,
+    "display_name": "TinyFish Tetra Cloud Browser Engine",
+    "description": "High-performance remote headless CDP browser execution infrastructure (tetra-anchor)",
+    "capabilities": {
+      "chat": true,
+      "reasoning": true,
+      "browser": true,
+      "vision_input": true,
+      "tool_use": true,
+      "agent_module": true
+    }
+  },
+  "web-fetch": {
+    "context_window": 128000,
+    "display_name": "TinyFish Web Fetch Extractor",
+    "description": "High-speed clean webpage text, links, and DOM content extraction engine",
+    "capabilities": {
+      "chat": true,
+      "reasoning": true,
+      "browser": true,
+      "vision_input": false,
+      "tool_use": true,
+      "agent_module": true
+    }
+  },
+  "web-search": {
+    "context_window": 128000,
+    "display_name": "TinyFish Structured Web Search",
+    "description": "Live ranked web search engine with temporal and domain filtering",
+    "capabilities": {
+      "chat": true,
+      "reasoning": true,
+      "browser": true,
+      "vision_input": false,
+      "tool_use": true,
+      "agent_module": true
+    }
+  },
+  "web-monitor": {
+    "context_window": 128000,
+    "display_name": "TinyFish Web & Price Monitor",
+    "description": "Automated webpage, price, and stock change monitor with Telegram and Webhook dispatch",
+    "capabilities": {
+      "chat": true,
+      "reasoning": true,
+      "browser": true,
+      "vision_input": true,
+      "tool_use": true,
+      "agent_module": true
+    }
+  }
+}
