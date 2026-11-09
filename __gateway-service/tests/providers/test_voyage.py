@@ -384,6 +384,7 @@ def test_models_metadata_integrity() -> None:
         assert "capabilities" in meta
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_full_wire_envelope_via_fastapi(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test full end-to-end wire envelope dispatch via FastAPI TestClient."""

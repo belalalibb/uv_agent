@@ -22,6 +22,11 @@ def build_app(
 ) -> FastAPI:
     """Composition: wire config + registries into the HTTP surface."""
 
+    registered_slugs = {provider.slug for provider in providers.all()}
+    if not config.allowed_provider_slugs.issubset(registered_slugs):
+        msg = "provider name allowlist references an unregistered provider"
+        raise ValueError(msg)
+
     app = FastAPI(title="Provider Gateway", docs_url=None, redoc_url=None, openapi_url=None)
     route_registry = routes or RouteRegistry(config.route_map, config.disabled_slugs)
     app.include_router(build_router(config, route_registry, providers))
@@ -48,20 +53,20 @@ def register_live_providers(registry: ProviderRegistry) -> None:
     credential mode) — the platform never learns it.
     """
 
-    from providers.groq.definition import DEFINITION as GROQ_DEFINITION
-    from providers.syntx.definition import DEFINITION as SYNTX_DEFINITION
     from providers.deepai.definition import DEFINITION as DEEPAI_DEFINITION
     from providers.freebuff.definition import DEFINITION as FREEBUFF_DEFINITION
-    from providers.youmind.definition import DEFINITION as YOUMIND_DEFINITION
+    from providers.groq.definition import DEFINITION as GROQ_DEFINITION
     from providers.ivycraft.definition import DEFINITION as IVYCRAFT_DEFINITION
     from providers.llamacoder.definition import DEFINITION as LLAMACODER_DEFINITION
-    from providers.upstage.definition import DEFINITION as UPSTAGE_DEFINITION
-    from providers.voyage.definition import DEFINITION as VOYAGE_DEFINITION
-    from providers.runpod_console.definition import DEFINITION as RUNPOD_CONSOLE_DEFINITION
-    from providers.parallel.definition import DEFINITION as PARALLEL_DEFINITION
     from providers.notegpt.definition import DEFINITION as NOTEGPT_DEFINITION
     from providers.overchat.definition import DEFINITION as OVERCHAT_DEFINITION
+    from providers.parallel.definition import DEFINITION as PARALLEL_DEFINITION
+    from providers.runpod_console.definition import DEFINITION as RUNPOD_CONSOLE_DEFINITION
+    from providers.syntx.definition import DEFINITION as SYNTX_DEFINITION
     from providers.tinyfish.definition import DEFINITION as TINYFISH_DEFINITION
+    from providers.upstage.definition import DEFINITION as UPSTAGE_DEFINITION
+    from providers.voyage.definition import DEFINITION as VOYAGE_DEFINITION
+    from providers.youmind.definition import DEFINITION as YOUMIND_DEFINITION
 
     registry.register("groq", GROQ_DEFINITION, "providers.groq.adapter")
     registry.register("syntx", SYNTX_DEFINITION, "providers.syntx.adapter")
@@ -72,7 +77,9 @@ def register_live_providers(registry: ProviderRegistry) -> None:
     registry.register("llamacoder", LLAMACODER_DEFINITION, "providers.llamacoder.adapter")
     registry.register("upstage", UPSTAGE_DEFINITION, "providers.upstage.adapter")
     registry.register("voyage", VOYAGE_DEFINITION, "providers.voyage.adapter")
-    registry.register("runpod_console", RUNPOD_CONSOLE_DEFINITION, "providers.runpod_console.adapter")
+    registry.register(
+        "runpod_console", RUNPOD_CONSOLE_DEFINITION, "providers.runpod_console.adapter"
+    )
     registry.register("parallel", PARALLEL_DEFINITION, "providers.parallel.adapter")
     registry.register("notegpt", NOTEGPT_DEFINITION, "providers.notegpt.adapter")
     registry.register("overchat", OVERCHAT_DEFINITION, "providers.overchat.adapter")

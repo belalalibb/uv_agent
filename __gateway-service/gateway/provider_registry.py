@@ -9,9 +9,10 @@ Rules (ADR-0008 / report §11):
   dispatch (heavy SDK imports don't block boot; lying DEFINITIONs still
   fail loud at startup).
 - OPEN-2 excluded operations in a DEFINITION = startup refusal.
-- Declared operation without a facade handler (or handler without
-  declaration) = STARTUP failure, not a runtime 500.
-- Duplicate slug = startup error.
+- Provider-default operations plus model-specific operation overrides form
+  the declared handler set; a missing or extra facade handler is a STARTUP
+  failure, not a runtime 500.
+- Duplicate slug or normalized public display name = startup error.
 """
 
 from __future__ import annotations
@@ -53,6 +54,12 @@ class RegisteredProvider:
                     msg = f"facade module {self.facade_module} must export HANDLERS dict"
                     raise ValueError(msg)
                 declared = set(self.definition.operations)
+                for model in self.definition.models:
+                    if (
+                        model.support is not None
+                        and model.support.operations is not None
+                    ):
+                        declared.update(model.support.operations)
                 registered = set(handlers)
                 if declared != registered:
                     missing = sorted(op.value for op in declared - registered)
@@ -86,7 +93,28 @@ class ProviderRegistry:
         raw_ops = raw_definition.get("operations")
         if isinstance(raw_ops, list):
             reject_excluded_operations([str(op) for op in raw_ops])  # OPEN-2
+        raw_models = raw_definition.get("models")
+        if isinstance(raw_models, list):
+            for raw_model in raw_models:
+                if not isinstance(raw_model, dict):
+                    continue
+                raw_support = raw_model.get("support")
+                if not isinstance(raw_support, dict):
+                    continue
+                override_ops = raw_support.get("operations")
+                if isinstance(override_ops, list):
+                    reject_excluded_operations([str(op) for op in override_ops])
         definition = ProviderDefinition.model_validate(raw_definition)
+        normalized_name = definition.display_name.strip().casefold()
+        if not normalized_name:
+            msg = "provider display name must not be blank"
+            raise ValueError(msg)
+        if any(
+            item.definition.display_name.strip().casefold() == normalized_name
+            for item in self._providers.values()
+        ):
+            msg = f"duplicate provider display name: {definition.display_name!r}"
+            raise ValueError(msg)
         provider = RegisteredProvider(
             slug=slug, definition=definition, facade_module=facade_module
         )
@@ -95,6 +123,26 @@ class ProviderRegistry:
 
     def get(self, slug: str) -> RegisteredProvider | None:
         return self._providers.get(slug)
+
+    def get_by_name(self, name: str) -> RegisteredProvider | None:
+        """Resolve a public display name without exposing the private slug."""
+
+        normalized = name.strip().casefold()
+        if not normalized:
+            return None
+        return next(
+            (
+                provider
+                for provider in self._providers.values()
+                if provider.definition.display_name.strip().casefold() == normalized
+            ),
+            None,
+        )
+
+    def all(self) -> tuple[RegisteredProvider, ...]:
+        """Return the registered providers in deterministic registration order."""
+
+        return tuple(self._providers.values())
 
     def eager_verify_all(self) -> None:
         """Optional startup strictness: force handler parity for every provider."""

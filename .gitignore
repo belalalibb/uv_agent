@@ -1,9 +1,10 @@
-# Byte-compiled / optimized / DLL files
+# Python bytecode / build artifacts
 __pycache__/
 *.py[cod]
 *$py.class
+*.egg-info/
 
-# Environment variables & secrets
+# Environment variables and secrets
 .env
 .env.local
 *.secret
@@ -13,13 +14,16 @@ __pycache__/
 env/
 venv/
 
-# Testing caches
+# Test and lint caches
 .pytest_cache/
+.ruff_cache/
 .coverage
 htmlcov/
 
-# Large test media fixtures
+# Runtime file-lock sidecars for provider account pools
+__gateway-service/providers/*/*.json.lock
+
+# Large generated media fixtures
 *.mp3
 *.ogg
 *.wav
-

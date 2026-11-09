@@ -221,6 +221,7 @@ async def test_tinyfish_error_mapping():
         _core.set_transport_override(None)
 
 
+@pytest.mark.provider_env
 def test_tinyfish_dynamic_discovery_temp_domains():
     """Verify dynamic discovery of __دومينات مؤقته directory without namespace clash."""
     root = _core.discover_temp_domains_root()

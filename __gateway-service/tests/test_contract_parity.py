@@ -10,11 +10,15 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import pytest
+
 from gateway.contracts import (
     EXCLUDED_OPERATIONS,
     ErrorCategory,
     GatewayOperation,
 )
+
+pytestmark = pytest.mark.contract
 
 ROOT = Path(__file__).resolve().parent.parent
 CONTRACT_MD = (ROOT / "docs" / "CONTRACT.md").read_text(encoding="utf-8")

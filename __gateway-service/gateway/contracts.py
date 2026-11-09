@@ -27,8 +27,8 @@ THREE-LAYER PROVIDER MODEL (mandatory architectural rule):
 
 Security rules (wire level):
     - X-Gateway-Secret + X-Gateway-Secret-Version on every authed call.
-    - X-Route-Token HEADER on all surfaces including GET/discovery —
-      NEVER in a URL path or query string (OPEN-3).
+    - New callers select a provider by public X-Provider-Name; the legacy
+      X-Route-Token HEADER remains accepted and is NEVER put in a URL.
     - route_token / slug / upstream identity never appear in responses,
       logs, or error messages.
 """
@@ -178,10 +178,10 @@ class RequestEnvelope(ContractModel):
     """Wire request for ``POST /v1/execute`` (OPEN-1: unified endpoint).
 
     ``operation`` inside the envelope is the SINGLE source of truth — v1
-    has no per-operation routes. Forbidden by construction (extra=forbid):
-    ``provider_slug``, ``upstream_url`` or any gateway-internal identifier —
-    the envelope cannot address a provider except via the route token,
-    which itself travels in the X-Route-Token HEADER (OPEN-3), not here.
+    has no per-operation routes. Provider selection stays outside the body:
+    new clients use the public X-Provider-Name header; legacy clients may
+    use X-Route-Token. Forbidden by construction (extra=forbid):
+    ``provider_slug``, ``upstream_url`` or any gateway-internal identifier.
     """
 
     operation: GatewayOperation
@@ -237,12 +237,15 @@ class ResponseEnvelope(ContractModel):
 
 HTTP_STATUS_MAP: dict[int, str] = {
     200: "envelope delivered (success OR execution failure — read error.category)",
-    400: "malformed envelope -> bad_request",
+    400: "malformed envelope or conflicting provider selectors -> bad_request",
     401: (
         "gateway auth failure (wrong secret=invalid_credential; "
         "stale version=auth_expired retryable)"
     ),
-    404: "unknown/revoked/disabled route token -> uniform provider_unavailable 'unknown route'",
+    404: (
+        "unknown/unrouted/disabled provider name or legacy route token -> "
+        "uniform provider_unavailable 'unknown route'"
+    ),
     500: "gateway internal fault -> retryable_server_error, sanitized provider_code",
 }
 
@@ -253,7 +256,7 @@ UNKNOWN_ROUTE_BODY: dict[str, Any] = {
         "message": "unknown route",
     }
 }
-"""Anti-enumeration: IDENTICAL body for unknown, revoked AND disabled tokens."""
+"""Anti-enumeration: identical body for all unknown/inactive provider selectors."""
 
 
 # --------------------------------------------------------------------------- #
@@ -285,11 +288,43 @@ contract change, never a silent addition."""
 _SEMVER_PARTS = 3
 
 
+class ModelSupportOverride(ContractModel):
+    """Optional full replacement for a model's Provider-level support defaults.
+
+    An omitted dimension inherits the Provider definition. A present
+    dimension replaces that entire list/map; there is no implicit merge.
+    """
+
+    operations: list[GatewayOperation] | None = None
+    capabilities: dict[str, bool] | None = None
+
+    @model_validator(mode="after")
+    def _validate_override(self) -> ModelSupportOverride:
+        if self.operations is not None and len(set(self.operations)) != len(self.operations):
+            msg = "duplicate operations in model support override"
+            raise ValueError(msg)
+        unknown = set(self.capabilities or {}) - CAPABILITY_KEYS
+        if unknown:
+            msg = f"unknown model capability keys (closed set): {sorted(unknown)}"
+            raise ValueError(msg)
+        return self
+
+
 class DeclaredModel(ContractModel):
-    """One declared model. ``[]`` overall is honest and valid."""
+    """One model declared by a Provider, optionally with support overrides."""
 
     name: str = Field(min_length=1, max_length=256)
     context_window: int | None = Field(default=None, ge=1)
+    support: ModelSupportOverride | None = None
+
+
+class DiscoveredModel(ContractModel):
+    """Public model row with defaults already resolved by the Gateway."""
+
+    name: str = Field(min_length=1, max_length=256)
+    context_window: int | None = Field(default=None, ge=1)
+    operations: list[GatewayOperation]
+    capabilities: dict[str, bool]
 
 
 class ProviderDefinition(ContractModel):
@@ -298,6 +333,10 @@ class ProviderDefinition(ContractModel):
     Never introspection: "code exists" != "capability declared". An
     operation declared without a registered facade handler (or a handler
     without declaration) is a STARTUP failure, not a runtime 500.
+
+    ``operations`` and ``capabilities`` are Provider-level defaults. A
+    model's optional ``support`` fields replace only the corresponding
+    dimension; Discovery publishes the resolved values per Model.
 
     ``display_name`` is the ONLY name that may cross the boundary
     (5-layer identity model, ADR-0008): the internal slug NEVER crosses.
@@ -402,15 +441,32 @@ class DescribeResponse(ContractModel):
     credential_mode: CredentialMode
     capabilities: dict[str, bool]
     operations: list[GatewayOperation]
-    models: list[DeclaredModel]
+    models: list[DiscoveredModel]
     definition_version: str
     health_supported: bool
 
 
-class ModelsResponse(ContractModel):
-    """/v1/models — cheap subset of describe."""
+class ProviderCatalogEntry(ContractModel):
+    """One enabled provider in the Gateway-owned discovery catalog.
 
-    models: list[DeclaredModel]
+    ``name`` is the public ``display_name`` used by X-Provider-Name;
+    ``description`` reuses the canonical manifest projection.
+    """
+
+    name: str = Field(min_length=1, max_length=200)
+    description: DescribeResponse
+
+
+class ProviderCatalogResponse(ContractModel):
+    """Authenticated provider catalog; contains no route tokens or slugs."""
+
+    providers: list[ProviderCatalogEntry]
+
+
+class ModelsResponse(ContractModel):
+    """/v1/models — cheap subset of describe with effective model support."""
+
+    models: list[DiscoveredModel]
 
 
 class HealthResponse(ContractModel):
@@ -426,4 +482,5 @@ class HealthResponse(ContractModel):
 
 HEADER_GATEWAY_SECRET = "X-Gateway-Secret"
 HEADER_GATEWAY_SECRET_VERSION = "X-Gateway-Secret-Version"
-HEADER_ROUTE_TOKEN = "X-Route-Token"  # header ALWAYS — never URL (OPEN-3)
+HEADER_ROUTE_TOKEN = "X-Route-Token"  # legacy selector; never URL (OPEN-3)
+HEADER_PROVIDER_NAME = "X-Provider-Name"  # public display_name selector

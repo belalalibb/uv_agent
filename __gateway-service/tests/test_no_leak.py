@@ -20,6 +20,8 @@ from tests.conftest import (
     valid_envelope,
 )
 
+pytestmark = pytest.mark.integration
+
 SENSITIVE = (ROUTE_TOKEN, SECRET_V7, SECRET_V6, EXAMPLE_SLUG, "mock-key-abc123")
 
 
@@ -61,10 +63,23 @@ def test_no_leak_all_error_paths(client) -> None:
 
 
 def test_no_leak_discovery_surfaces(client) -> None:
+    catalog = client.get("/v1/providers", headers=auth_headers())
+    assert catalog.status_code == 200
+    _assert_clean(catalog.text)
+
     for path in ("/v1/describe", "/v1/models", "/v1/health"):
         response = client.get(path, headers=routed_headers())
         assert response.status_code == 200
         _assert_clean(response.text)  # includes: slug never crosses
+
+
+def test_no_leak_name_selected_execution(client) -> None:
+    headers = auth_headers()
+    headers["X-Provider-Name"] = "Example Provider (mock)"
+    response = client.post("/v1/execute", headers=headers, json=valid_envelope())
+
+    assert response.status_code == 200
+    _assert_clean(response.text)
 
 
 def test_slug_never_in_describe(client) -> None:

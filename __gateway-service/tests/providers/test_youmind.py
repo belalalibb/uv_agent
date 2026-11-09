@@ -68,6 +68,7 @@ def test_youmind_handlers_parity():
     assert set(parsed.operations) == set(HANDLERS)
 
 
+@pytest.mark.provider_env
 def test_youmind_temp_domains_discovery():
     """Verify dynamic discovery of __دومينات مؤقته directory."""
     root = _core.discover_temp_domains_root()
@@ -111,6 +112,7 @@ async def test_youmind_payload_validation():
     assert res_role.error.category is ErrorCategory.BAD_REQUEST
 
 
+@pytest.mark.provider_env
 @pytest.mark.asyncio
 async def test_youmind_generate_text_mocked_success():
     """Hermetic success test via mocked SSE streaming transport."""
@@ -139,6 +141,7 @@ async def test_youmind_generate_text_mocked_success():
         _core.set_transport_override(None)
 
 
+@pytest.mark.provider_env
 @pytest.mark.asyncio
 async def test_youmind_upstream_rate_limited():
     """HTTP 429 response mapped to ErrorCategory.RATE_LIMITED."""
@@ -159,6 +162,7 @@ async def test_youmind_upstream_rate_limited():
         _core.set_transport_override(None)
 
 
+@pytest.mark.provider_env
 @pytest.mark.asyncio
 async def test_youmind_upstream_permission_denied():
     """PermissionDenied event inside SSE mapped to MODEL_UNAVAILABLE."""

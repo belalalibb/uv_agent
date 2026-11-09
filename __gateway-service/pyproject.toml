@@ -17,13 +17,22 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=8",
-    "pytest-asyncio>=0.23",
+    "pytest-asyncio>=0.24",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q"
+addopts = "-q -m 'not external_provider'"
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "unit: hermetic unit or adapter test",
+    "contract: Gateway and provider contract/parity test",
+    "integration: local in-process Gateway or SDK integration test",
+    "external_provider: requires a live upstream, provider account state, or provider-specific fixture",
+    "external: detail marker for tests requiring live network/upstream access",
+    "provider_env: detail marker for provider account state or optional local-domain fixtures",
+]
 
 [tool.ruff]
 line-length = 100

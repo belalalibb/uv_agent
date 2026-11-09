@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import pytest
+
 from tests.conftest import ROUTE_TOKEN, auth_headers, routed_headers, valid_envelope
+
+pytestmark = pytest.mark.integration
 
 
 def test_execute_success_wire_shape(client) -> None:
@@ -15,6 +19,25 @@ def test_execute_success_wire_shape(client) -> None:
     assert body["usage"]["units"] == 1
     assert body["error"] is None
     assert body["latency_ms"] >= 0
+
+
+def test_execute_resolves_public_provider_name_without_route_token(client) -> None:
+    headers = auth_headers()
+    headers["X-Provider-Name"] = "example provider (mock)"
+    response = client.post("/v1/execute", headers=headers, json=valid_envelope())
+
+    assert response.status_code == 200
+    assert response.json()["succeeded"] is True
+    assert "hello gateway" in response.json()["output"]["text"]
+
+
+def test_execute_rejects_both_provider_selectors(client) -> None:
+    headers = routed_headers()
+    headers["X-Provider-Name"] = "Example Provider (mock)"
+    response = client.post("/v1/execute", headers=headers, json=valid_envelope())
+
+    assert response.status_code == 400
+    assert response.json()["error"]["category"] == "bad_request"
 
 
 def test_execute_missing_auth_401(client) -> None:
@@ -62,6 +85,37 @@ def test_execute_missing_route_token_uniform_404(client) -> None:
     response = client.post("/v1/execute", headers=auth_headers(), json=valid_envelope())
     assert response.status_code == 404
     assert response.json()["error"]["message"] == "unknown route"
+
+
+def test_execute_unknown_provider_name_uses_uniform_404(client) -> None:
+    headers = auth_headers()
+    headers["X-Provider-Name"] = "not a registered provider"
+    response = client.post("/v1/execute", headers=headers, json=valid_envelope())
+
+    assert response.status_code == 404
+    assert response.json() == {
+        "error": {
+            "category": "provider_unavailable",
+            "retryable": False,
+            "message": "unknown route",
+        }
+    }
+
+
+def test_execute_disabled_provider_name_uses_uniform_404(client, routes) -> None:
+    routes.set_disabled("example_mock", True)
+    headers = auth_headers()
+    headers["X-Provider-Name"] = "Example Provider (mock)"
+    response = client.post("/v1/execute", headers=headers, json=valid_envelope())
+
+    assert response.status_code == 404
+    assert response.json() == {
+        "error": {
+            "category": "provider_unavailable",
+            "retryable": False,
+            "message": "unknown route",
+        }
+    }
 
 
 def test_execute_malformed_envelope_400(client) -> None:
