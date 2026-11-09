@@ -47,3 +47,13 @@ def test_slug_routability_does_not_expose_token() -> None:
     assert not registry.is_slug_routable("slug_b")
     registry.set_disabled("slug_a", True)
     assert not registry.is_slug_routable("slug_a")
+
+
+def test_discovered_provider_can_be_name_routed_without_a_legacy_map() -> None:
+    registry = RouteRegistry({})
+
+    assert registry.is_slug_enabled("auto_discovered_slug")
+    registry.set_disabled("auto_discovered_slug", True)
+    assert not registry.is_slug_enabled("auto_discovered_slug")
+    registry.set_disabled("auto_discovered_slug", False)
+    assert registry.is_slug_enabled("auto_discovered_slug")

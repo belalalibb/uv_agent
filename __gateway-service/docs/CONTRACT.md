@@ -93,32 +93,33 @@ conform; they never extend it.
 - Provider-addressed calls select exactly one provider using either
   `X-Provider-Name: <public display_name>` (preferred) or the legacy
   `X-Route-Token: <opaque>`. The route token NEVER appears in a URL path or
-  query string (ADR-0008 OPEN-3). The catalog and `X-Provider-Name` selection
-  include only registered, enabled providers with an active `GW_ROUTE_MAP`
-  entry and a slug present in `GW_PROVIDER_ALLOWLIST`. The route token remains
-  server-side; a name-based SDK caller does not send it. The allowlist is
-  Gateway-private and defaults to empty (deny all) for the name-based path and
-  catalog. During the compatibility period, `X-Route-Token` is authorized
-  separately by the gateway secret and a valid active token-to-slug mapping;
-  it is intentionally not gated by `GW_PROVIDER_ALLOWLIST`. Thus an empty
-  allowlist hides the catalog and denies name selection, but does not revoke
-  legacy route tokens. Provider display names are unique after trimming and
-  case-folding; duplicates fail registration.
-- Unknown, unregistered, unrouted, revoked, or disabled provider selections
-  all return the same uniform 404 body (anti-enumeration):
+  query string (ADR-0008 OPEN-3). At startup, Gateway discovers complete
+  Provider packages under `providers/` (a folder must contain
+  `definition.py` and `adapter.py`; dot/underscore-prefixed folders are
+  ignored). The catalog and `X-Provider-Name` selection use those discovered,
+  enabled definitions directly; neither `GW_ROUTE_MAP` nor a per-Provider
+  allowlist is needed. `GW_ROUTE_MAP` is optional and exists only to preserve
+  older `X-Route-Token` clients. A non-empty `GW_PROVIDER_ALLOWLIST` is
+  obsolete and prevents startup so an old setting cannot silently imply a
+  scope it no longer enforces. Provider display names are unique after
+  trimming and case-folding; duplicates fail startup.
+- Unknown, unregistered, disabled, and (for legacy token selection) unrouted
+  or revoked provider selections all return the same uniform 404 body
+  (anti-enumeration):
 
 ```json
 {"error": {"category": "provider_unavailable", "retryable": false, "message": "unknown route"}}
 ```
 
 - A Gateway secret is trusted backend authentication, not an end-user or
-  browser credential; keep it in a server-side secret store. Holders share the
-  deployment's `GW_PROVIDER_ALLOWLIST` scope when using `X-Provider-Name`.
-  Legacy `X-Route-Token` requests additionally require an active token-to-slug
-  mapping and are not constrained by that allowlist during this compatibility
-  period. Applications needing different name-based scopes must use isolated
-  Gateway deployments until principal-scoped credentials exist. The name
-  selector itself does not prove possession of a provider-specific token.
+  browser credential; keep it in a server-side secret store. In v1, every
+  holder shares access to all discovered, enabled Providers in that Gateway
+  deployment; there is no per-principal Provider allowlist. Legacy
+  `X-Route-Token` requests additionally require an active token-to-slug mapping
+  in the optional compatibility map. Applications needing different
+  Provider scopes must use isolated Gateway deployments until
+  principal-scoped credentials exist. The name selector itself does not prove
+  possession of a Provider-specific token.
 - Never logged / never returned anywhere: credential values, route_token,
   slug, upstream identity, exception class names.
 
@@ -129,7 +130,7 @@ conform; they never extend it.
 | 200 | Envelope delivered — success **and** execution failures (read `error.category`) |
 | 400 | Malformed envelope or both provider selectors supplied → `bad_request` |
 | 401 | Gateway auth failure (wrong secret = `invalid_credential`; stale version = `auth_expired`, retryable) |
-| 404 | Unknown, unregistered, unrouted, revoked, or disabled provider selection → uniform "unknown route" |
+| 404 | Unknown/unregistered/disabled Provider name, or unknown/unrouted/revoked legacy route token → uniform "unknown route" |
 | 500 | Gateway internal fault → `retryable_server_error`, sanitized `provider_code` |
 
 ## REQUEST ENVELOPE (`POST /v1/execute`)
@@ -435,7 +436,7 @@ Errors: undecodable image → `bad_request`; non-vision model → `unsupported_c
 
 ## DISCOVERY SHAPES
 
-`GET /v1/providers` returns only enabled registrations; `name` is the public
+`GET /v1/providers` returns only enabled, auto-discovered Providers; `name` is the public
 `display_name` accepted by `X-Provider-Name`, and `description` is the same
 manifest projection returned by `/v1/describe`:
 ```json

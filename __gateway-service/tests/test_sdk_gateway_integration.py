@@ -39,6 +39,7 @@ pytestmark = pytest.mark.integration
 async def test_sdk_discovers_and_executes_a_gateway_added_provider(
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
+    tmp_path: Path,
 ) -> None:
     """No provider name, route token, or operation list is added to the SDK."""
 
@@ -46,10 +47,18 @@ async def test_sdk_discovers_and_executes_a_gateway_added_provider(
     provider_slug = "integration_only_fresh_provider"
     route_token = "rtk_integration_only_server_side"
     gateway_secret = "integration-gateway-secret-not-a-real-value"
-    module_name = "providers._integration_added.adapter"
-
-    package = ModuleType("providers._integration_added")
-    package.__path__ = []  # type: ignore[attr-defined]
+    package_prefix = "test_dynamic_provider_plugins"
+    module_name = f"{package_prefix}.{provider_slug}.adapter"
+    plugin_root = tmp_path / package_prefix
+    package_dir = plugin_root / provider_slug
+    package_dir.mkdir(parents=True)
+    (plugin_root / "__init__.py").write_text("", encoding="utf-8")
+    (package_dir / "__init__.py").write_text("", encoding="utf-8")
+    (package_dir / "adapter.py").write_text(
+        "# Handlers are injected into sys.modules for this hermetic test.\\n",
+        encoding="utf-8",
+    )
+    monkeypatch.syspath_prepend(str(tmp_path))
     adapter = ModuleType(module_name)
 
     async def generate_text(context: ProviderContext) -> FacadeResult:
@@ -70,31 +79,34 @@ async def test_sdk_discovers_and_executes_a_gateway_added_provider(
         GatewayOperation.GENERATE_TEXT: generate_text,
         GatewayOperation.ANALYZE_VISION: analyze_vision,
     }  # type: ignore[attr-defined]
-    monkeypatch.setitem(sys.modules, "providers._integration_added", package)
     monkeypatch.setitem(sys.modules, module_name, adapter)
 
-    providers = ProviderRegistry()
-    providers.register(
-        slug=provider_slug,
-        raw_definition={
-            "display_name": provider_name,
-            "definition_version": "1.0.0",
-            "credential_mode": "platform",
-            "capabilities": {"chat": True},
-            "operations": ["generate_text"],
-            "models": [
-                {"name": "integration-model", "context_window": 4096},
-                {
-                    "name": "vision-model",
-                    "support": {
-                        "operations": ["analyze_vision"],
-                        "capabilities": {"vision_input": True},
-                    },
+    definition = {
+        "display_name": provider_name,
+        "definition_version": "1.0.0",
+        "credential_mode": "platform",
+        "capabilities": {"chat": True},
+        "operations": ["generate_text"],
+        "models": [
+            {"name": "integration-model", "context_window": 4096},
+            {
+                "name": "vision-model",
+                "support": {
+                    "operations": ["analyze_vision"],
+                    "capabilities": {"vision_input": True},
                 },
-            ],
-            "health_supported": False,
-        },
-        facade_module=module_name,
+            },
+        ],
+        "health_supported": False,
+    }
+    (package_dir / "definition.py").write_text(
+        f"DEFINITION = {definition!r}\n", encoding="utf-8"
+    )
+
+    providers = ProviderRegistry()
+    providers.discover_packages(
+        providers_root=plugin_root,
+        package_prefix=package_prefix,
     )
     providers.eager_verify_all()
 
@@ -102,7 +114,6 @@ async def test_sdk_discovers_and_executes_a_gateway_added_provider(
         secrets_by_version={1: gateway_secret},
         current_secret_version=1,
         route_map={route_token: provider_slug},
-        allowed_provider_slugs=frozenset({provider_slug}),
     )
     routes = RouteRegistry(service_config.route_map)
     app = build_app(service_config, providers, routes)

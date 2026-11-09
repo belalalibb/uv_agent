@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 🏛️ Provider Contract & Standard Compliance Test
 ════════════════════════════════════════════════════════════════════════════════
@@ -15,8 +14,9 @@ from __future__ import annotations
 
 import importlib
 import json
-from pathlib import Path
 import re
+from pathlib import Path
+
 import pytest
 
 from gateway.contracts import CAPABILITY_KEYS
@@ -50,9 +50,13 @@ def get_live_provider_slugs() -> list[str]:
     """Discover production provider directories under providers/ (skipping templates)."""
     slugs = []
     for item in PROVIDERS_DIR.iterdir():
-        if item.is_dir() and not item.name.startswith((".", "_")):
-            if (item / "definition.py").exists():
-                slugs.append(item.name)
+        if (
+            item.is_dir()
+            and not item.name.startswith((".", "_"))
+            and (item / "definition.py").is_file()
+            and (item / "adapter.py").is_file()
+        ):
+            slugs.append(item.name)
     return sorted(slugs)
 
 
@@ -108,7 +112,7 @@ def test_provider_file_structure(slug: str) -> None:
 def test_models_metadata_json_schema(slug: str) -> None:
     """Invariant 3: models_metadata.json must be valid JSON with non-empty models."""
     meta_path = PROVIDERS_DIR / slug / "models_metadata.json"
-    with open(meta_path, "r", encoding="utf-8") as f:
+    with open(meta_path, encoding="utf-8") as f:
         data = json.load(f)
 
     if isinstance(data, dict):
@@ -132,10 +136,12 @@ def test_definition_capabilities_and_parity(slug: str) -> None:
     """Invariant 4: Capabilities must belong to closed set and match operations."""
     mod = importlib.import_module(f"providers.{slug}.definition")
     assert hasattr(mod, "DEFINITION"), f"{slug}/definition.py must export 'DEFINITION'"
-    d = getattr(mod, "DEFINITION")
+    d = mod.DEFINITION
     assert isinstance(d, dict), f"{slug} DEFINITION must be a dictionary"
     assert "display_name" in d, f"{slug} DEFINITION missing display_name"
-    assert "credential_mode" in d or "auth_pattern" in d, f"{slug} DEFINITION missing credential/auth mode"
+    assert "credential_mode" in d or "auth_pattern" in d, (
+        f"{slug} DEFINITION missing credential/auth mode"
+    )
 
     caps = d.get("capabilities", {})
     unknown_caps = set(caps.keys()) - CAPABILITY_KEYS
@@ -147,24 +153,21 @@ def test_definition_capabilities_and_parity(slug: str) -> None:
 
 
 # --------------------------------------------------------------------------- #
-# 5. Live Registration in app.py                                              #
+# 5. Automatic package discovery                                            #
 # --------------------------------------------------------------------------- #
 
 
-@pytest.mark.parametrize("slug", get_live_provider_slugs())
-def test_provider_registered_in_app_py(slug: str) -> None:
-    """Invariant 5: Every live provider MUST be registered in app.py::register_live_providers."""
-    from app import register_live_providers
+def test_live_provider_packages_are_auto_discovered() -> None:
+    """Every complete Provider folder is loaded without an app.py list."""
     from gateway.provider_registry import ProviderRegistry
 
     registry = ProviderRegistry()
-    register_live_providers(registry)
-    registered = registry.get(slug)
-    assert registered is not None, (
-        f"Provider '{slug}' is NOT registered in app.py::register_live_providers! "
-        f"Add registry.register('{slug}', ...) to app.py. "
-        f"See workflow: {ONBOARDING_WORKFLOW} (Step 5)"
-    )
+    registry.discover_packages()
+
+    discovered = sorted(provider.slug for provider in registry.all())
+    assert discovered == get_live_provider_slugs()
+    assert registry.get("_example") is None
+    assert registry.get("_template") is None
 
 
 # --------------------------------------------------------------------------- #

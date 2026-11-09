@@ -12,6 +12,7 @@ package (environment variable ``GW_GROQ_API_KEY``; the NAME is documented,
 the VALUE never appears anywhere). The platform never learns the key; the
 request envelope carries no credential value.
 
-Auto-discovery does NOT register this package (registration of live
-providers is an explicit act in app composition / test composition).
+Gateway auto-discovers this package from its ``definition.py`` and
+``adapter.py`` files at startup; the leading-underscore reference packages
+are excluded from that scan.
 """

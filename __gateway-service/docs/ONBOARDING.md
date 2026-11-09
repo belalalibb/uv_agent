@@ -8,8 +8,8 @@ contract is [`CONTRACT.md`](CONTRACT.md), and the reference facade is
 
 Adding a Provider for an existing operation is Gateway work: it does not
 require a provider-specific SDK or Agent Core change. Production registration
-is explicit; do not assume that a new package is discovered or enabled
-automatically.
+is automatic: on startup, Gateway discovers complete Provider packages under
+`providers/` and validates their definitions and handlers.
 
 ## The three-layer rule
 
@@ -27,8 +27,9 @@ automatically.
 
 1. **Create the Provider package.** Copy `providers/_example/` as a working
    reference or `providers/_template/` as a blank facade into
-   `providers/<your_provider>/`. Do not use a leading underscore; reference
-   packages with that prefix are not live Providers.
+   `providers/<your_provider>/`. The folder name must be a Python identifier
+   and must not start with a dot or underscore; those prefixes are reserved
+   for hidden/reference folders and are excluded from automatic discovery.
 
 2. **Declare honest Provider defaults and models** in `definition.py`.
    `operations` and `capabilities` are defaults shared by models that do not
@@ -73,8 +74,9 @@ automatically.
    model-specific operation override must have a real handler in
    `adapter.py`. The `HANDLERS` mapping must exactly match the union of those
    declarations: missing handlers and undeclared extra handlers fail parity
-   verification. In normal process startup, `register_live_providers()` is
-   followed by `eager_verify_all()` to validate that parity.
+   verification. On process startup, Gateway scans Provider folders, imports
+   each `definition.py`, and runs `eager_verify_all()` so incomplete or
+   inconsistent packages fail loudly before serving requests.
 
 4. **Handle credentials safely.** For `user_key`, the request credential is
    transient and must not be stored or logged. For `platform`, resolve the
@@ -82,17 +84,17 @@ automatically.
    accept it from the request. Never return credentials, route tokens, slugs,
    upstream identities, or exception class names.
 
-5. **Register and route the Provider explicitly.** Add its Definition and
-   Adapter to `app.register_live_providers()`. Configure the deployment's
-   `GW_ROUTE_MAP` and `GW_PROVIDER_ALLOWLIST` for the internal Provider slug.
-   The name-based catalog and `X-Provider-Name` path require both an active
-   route and allowlist entry; the allowlist is empty by default. This is
-   explicit registration and configuration, not dynamic plugin discovery.
-   `X-Provider-Name` and `X-Route-Token` are mutually exclusive selectors.
-   The legacy token path still requires the trusted Gateway secret and an
-   active route mapping, and is not gated by the allowlist during the current
-   compatibility period. The Gateway secret belongs only in a trusted backend,
-   never in a browser or end-user application.
+5. **No central registration or per-Provider route configuration is
+   needed.** A non-hidden package containing `definition.py` and `adapter.py`
+   is discovered automatically at Gateway startup and appears in the
+   authenticated catalog unless it is disabled. `X-Provider-Name` resolves
+   directly against those discovered definitions; do not add the Provider to
+   an app.py list or configure `GW_PROVIDER_ALLOWLIST`/`GW_ROUTE_MAP` for this
+   path. The optional `GW_ROUTE_MAP` is only for older `X-Route-Token`
+   callers; those callers need a valid token-to-slug mapping in addition to
+   the shared Gateway secret. `X-Provider-Name` and `X-Route-Token` are
+   mutually exclusive selectors. The Gateway secret belongs only in a
+   trusted backend, never in a browser or end-user application.
 
 6. **Add hermetic tests.** Cover the facade's canonical success and error
    mapping, credential/no-leak behavior, exact Definition-to-handler parity,
@@ -147,5 +149,6 @@ Capability Registry, or parallel SDK schemas as part of this work.
   shared contract code or unrelated Provider packages for it. Contract-level
   changes, such as a new Operation or Capability key, require separate review,
   implementation, tests, and documentation.
-- Keep `GW_PROVIDER_ALLOWLIST` and route mapping configuration explicit; do
-  not infer registration from an SDK catalog or local package presence.
+- The Gateway catalog is derived from its Provider package folders; do not
+  maintain a second Provider list in the SDK, app.py, or per-Provider routing
+  settings.

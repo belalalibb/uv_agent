@@ -1,5 +1,10 @@
 # Syntx implementation plan — approved T01–T12
 
+> **Historical implementation log:** app-registration references below describe
+> the baseline when this work was completed in September 2026. Gateway now
+> auto-discovers complete Provider packages at startup; see
+> [`ONBOARDING.md`](ONBOARDING.md) for the current onboarding path.
+
 Approved scope: standalone provider in `__gateway-service/providers/syntx/`.
 Baseline: `d44a4f2`. Reconstructed from the approved conversation after a sandbox
 reset removed the local-only `502d99f` commit; that Git object is not recoverable

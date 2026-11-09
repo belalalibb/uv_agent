@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 from app import build_app
 from gateway.contracts import FacadeResult, GatewayOperation
 from gateway.provider_registry import ProviderRegistry
+from gateway.route_registry import RouteRegistry
 from tests.conftest import (
     EXAMPLE_DEFINITION,
     ROUTE_TOKEN,
@@ -40,6 +41,27 @@ def test_provider_catalog_requires_auth(client) -> None:
     assert client.get("/v1/providers").status_code == 401
 
 
+def test_build_app_auto_discovers_provider_packages(config) -> None:
+    """Production composition needs no manually populated registry."""
+    app = build_app(config, routes=RouteRegistry({}))
+
+    with TestClient(app) as test_client:
+        response = test_client.get("/v1/providers", headers=auth_headers())
+        discovered = response.json()["providers"]
+        assert discovered
+        name_headers = auth_headers()
+        name_headers["X-Provider-Name"] = discovered[0]["name"]
+        describe = test_client.get("/v1/describe", headers=name_headers)
+
+    assert response.status_code == 200
+    assert discovered
+    assert all(item["name"] != "Example Provider (mock)" for item in discovered)
+    assert describe.status_code == 200
+    assert describe.json()["display_name"] == discovered[0]["name"]
+    assert "_example" not in response.text
+    assert "_template" not in response.text
+
+
 def test_provider_catalog_hides_disabled_provider(client, routes) -> None:
     routes.set_disabled("example_mock", True)
 
@@ -49,49 +71,52 @@ def test_provider_catalog_hides_disabled_provider(client, routes) -> None:
     assert response.json() == {"providers": []}
 
 
-def test_empty_name_allowlist_denies_catalog_and_execution(config, providers, routes) -> None:
-    unscoped_config = replace(config, allowed_provider_slugs=frozenset())
+def test_name_catalog_and_routing_need_no_legacy_route_map(config, providers) -> None:
+    """Discovered provider names work without GW_ROUTE_MAP entries."""
+    config_without_routes = replace(config, route_map={})
+    routes_without_legacy_tokens = RouteRegistry({})
     headers = auth_headers()
     headers["X-Provider-Name"] = "Example Provider (mock)"
 
-    with TestClient(build_app(unscoped_config, providers, routes)) as scoped_client:
-        catalog = scoped_client.get("/v1/providers", headers=auth_headers())
-        execution = scoped_client.post(
+    with TestClient(
+        build_app(config_without_routes, providers, routes_without_legacy_tokens)
+    ) as test_client:
+        catalog = test_client.get("/v1/providers", headers=auth_headers())
+        describe = test_client.get("/v1/describe", headers=headers)
+        execution = test_client.post(
             "/v1/execute", headers=headers, json=valid_envelope()
         )
-        legacy_execution = scoped_client.post(
+        legacy_execution = test_client.post(
             "/v1/execute", headers=routed_headers(), json=valid_envelope()
         )
 
     assert catalog.status_code == 200
-    assert catalog.json() == {"providers": []}
-    assert execution.status_code == 404
-    assert execution.json()["error"]["message"] == "unknown route"
-    assert legacy_execution.status_code == 200
-    assert legacy_execution.json()["succeeded"] is True
+    assert [item["name"] for item in catalog.json()["providers"]] == [
+        "Example Provider (mock)"
+    ]
+    assert describe.status_code == 200
+    assert execution.status_code == 200
+    assert execution.json()["succeeded"] is True
+    assert legacy_execution.status_code == 404
 
 
-def test_build_app_rejects_allowlist_slug_without_registration(config, providers) -> None:
-    invalid_config = replace(
-        config, allowed_provider_slugs=frozenset({"not_registered_provider"})
-    )
-
-    with pytest.raises(ValueError, match="allowlist references an unregistered provider"):
-        build_app(invalid_config, providers)
-
-
-def test_name_resolution_requires_an_active_route(client, routes) -> None:
+def test_name_resolution_is_independent_of_legacy_token_revocation(
+    client, routes
+) -> None:
     routes.revoke(ROUTE_TOKEN)
-    headers = auth_headers()
-    headers["X-Provider-Name"] = "Example Provider (mock)"
+    name_headers = auth_headers()
+    name_headers["X-Provider-Name"] = "Example Provider (mock)"
 
     catalog = client.get("/v1/providers", headers=auth_headers())
-    describe = client.get("/v1/describe", headers=headers)
+    describe_by_name = client.get("/v1/describe", headers=name_headers)
+    describe_by_token = client.get("/v1/describe", headers=routed_headers())
 
-    assert catalog.status_code == 200
-    assert catalog.json() == {"providers": []}
-    assert describe.status_code == 404
-    assert describe.json()["error"]["message"] == "unknown route"
+    assert [item["name"] for item in catalog.json()["providers"]] == [
+        "Example Provider (mock)"
+    ]
+    assert describe_by_name.status_code == 200
+    assert describe_by_token.status_code == 404
+    assert describe_by_token.json()["error"]["message"] == "unknown route"
 
 
 def test_public_provider_name_selects_all_discovery_surfaces(client) -> None:

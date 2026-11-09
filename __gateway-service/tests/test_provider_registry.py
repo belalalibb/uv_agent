@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from gateway.provider_registry import ProviderRegistry
@@ -116,4 +118,97 @@ def test_excluded_operation_rejected_in_model_override_at_registration() -> None
             "x",
             definition,
             "providers._example.adapter",
+        )
+
+
+
+def _write_discoverable_package(
+    package_root: Path,
+    slug: str,
+    *,
+    definition: dict[str, object] | None = None,
+    include_adapter: bool = True,
+) -> None:
+    package_dir = package_root / slug
+    package_dir.mkdir(parents=True)
+    (package_dir / "__init__.py").write_text("", encoding="utf-8")
+    (package_dir / "definition.py").write_text(
+        f"DEFINITION = {definition or dict(EXAMPLE_DEFINITION)!r}\n",
+        encoding="utf-8",
+    )
+    if include_adapter:
+        (package_dir / "adapter.py").write_text(
+            "from gateway.contracts import FacadeResult, GatewayOperation\n"
+            "async def generate_text(_context):\n"
+            "    return FacadeResult(succeeded=True, output={'text': 'ok'})\n"
+            "HANDLERS = {GatewayOperation.GENERATE_TEXT: generate_text}\n",
+            encoding="utf-8",
+        )
+
+
+def test_discover_packages_scans_folders_and_skips_reference_packages(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    package_name = "provider_discovery_fixture"
+    package_root = tmp_path / package_name
+    package_root.mkdir()
+    (package_root / "__init__.py").write_text("", encoding="utf-8")
+    monkeypatch.syspath_prepend(str(tmp_path))
+
+    discovered_definition = dict(EXAMPLE_DEFINITION)
+    discovered_definition["display_name"] = "Auto Discovered Provider"
+    _write_discoverable_package(
+        package_root, "auto_discovered", definition=discovered_definition
+    )
+    _write_discoverable_package(package_root, "_example")
+    _write_discoverable_package(package_root, "_template")
+    _write_discoverable_package(package_root, ".hidden")
+
+    registry = ProviderRegistry()
+    discovered = registry.discover_packages(
+        providers_root=package_root,
+        package_prefix=package_name,
+    )
+
+    assert [provider.slug for provider in discovered] == ["auto_discovered"]
+    assert registry.get_by_name("Auto Discovered Provider") is discovered[0]
+    registry.eager_verify_all()
+
+
+def test_discover_packages_fails_on_incomplete_provider_folder(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    package_name = "incomplete_provider_fixture"
+    package_root = tmp_path / package_name
+    package_root.mkdir()
+    (package_root / "__init__.py").write_text("", encoding="utf-8")
+    broken = package_root / "broken_provider"
+    broken.mkdir()
+    (broken / "adapter.py").write_text("HANDLERS = {}\n", encoding="utf-8")
+    monkeypatch.syspath_prepend(str(tmp_path))
+
+    with pytest.raises(ValueError, match="missing definition.py"):
+        ProviderRegistry().discover_packages(
+            providers_root=package_root,
+            package_prefix=package_name,
+        )
+
+
+def test_discover_packages_does_not_ignore_an_empty_provider_folder(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    package_name = "empty_provider_fixture"
+    package_root = tmp_path / package_name
+    package_root.mkdir()
+    (package_root / "__init__.py").write_text("", encoding="utf-8")
+    (package_root / "unfinished_provider").mkdir()
+    monkeypatch.syspath_prepend(str(tmp_path))
+
+    with pytest.raises(ValueError, match="missing definition.py"):
+        ProviderRegistry().discover_packages(
+            providers_root=package_root,
+            package_prefix=package_name,
         )

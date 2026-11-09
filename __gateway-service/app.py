@@ -1,8 +1,8 @@
-"""Entrypoint ONLY: build_app() + uvicorn run. No logic lives here.
+"""Entrypoint and composition for the Gateway service.
 
-Dependency direction (fixed): providers import gateway.contracts; the
-gateway core imports contracts; app.py imports the core. NOTHING imports
-app.py back — providers are testable against gateway.contracts alone.
+Provider implementations depend only on ``gateway.contracts``. The Gateway
+core owns package discovery, validation, routing, and HTTP composition; provider
+packages never import this module.
 """
 
 from __future__ import annotations
@@ -17,15 +17,15 @@ from gateway.routes import build_router
 
 def build_app(
     config: GatewayConfig,
-    providers: ProviderRegistry,
+    providers: ProviderRegistry | None = None,
     routes: RouteRegistry | None = None,
 ) -> FastAPI:
-    """Composition: wire config + registries into the HTTP surface."""
+    """Compose the Gateway, auto-discovering packages when none are supplied."""
 
-    registered_slugs = {provider.slug for provider in providers.all()}
-    if not config.allowed_provider_slugs.issubset(registered_slugs):
-        msg = "provider name allowlist references an unregistered provider"
-        raise ValueError(msg)
+    if providers is None:
+        providers = ProviderRegistry()
+        providers.discover_packages()
+        providers.eager_verify_all()
 
     app = FastAPI(title="Provider Gateway", docs_url=None, redoc_url=None, openapi_url=None)
     route_registry = routes or RouteRegistry(config.route_map, config.disabled_slugs)
@@ -37,55 +37,20 @@ def main() -> None:  # pragma: no cover — process entrypoint, not hermetic
     import uvicorn
 
     config = load_config_from_env()
-    registry = ProviderRegistry()
-    register_live_providers(registry)
-    registry.eager_verify_all()
-    uvicorn.run(build_app(config, registry), host="127.0.0.1", port=8800)
+    uvicorn.run(build_app(config), host="127.0.0.1", port=8800)
 
 
 def register_live_providers(registry: ProviderRegistry) -> None:
-    """Register the gateway's LIVE providers (G3: groq is the first).
+    """Compatibility shim: discover every live package instead of a fixed list.
 
-    The slug is deployment-internal (5-layer identity: it never crosses to
-    the platform); routing to it happens via opaque route tokens in the
-    config's route_map. The Groq API key is resolved by the provider's own
-    Layer 1 from the ``GW_GROQ_API_KEY`` environment variable (platform
-    credential mode) — the platform never learns it.
+    Production startup calls ``build_app`` without a registry, which performs
+    this discovery automatically. Kept for older test/live scripts that still
+    call the former registration helper; underscore-prefixed reference
+    packages such as ``_example`` and ``_template`` are excluded by the
+    registry.
     """
 
-    from providers.deepai.definition import DEFINITION as DEEPAI_DEFINITION
-    from providers.freebuff.definition import DEFINITION as FREEBUFF_DEFINITION
-    from providers.groq.definition import DEFINITION as GROQ_DEFINITION
-    from providers.ivycraft.definition import DEFINITION as IVYCRAFT_DEFINITION
-    from providers.llamacoder.definition import DEFINITION as LLAMACODER_DEFINITION
-    from providers.notegpt.definition import DEFINITION as NOTEGPT_DEFINITION
-    from providers.overchat.definition import DEFINITION as OVERCHAT_DEFINITION
-    from providers.parallel.definition import DEFINITION as PARALLEL_DEFINITION
-    from providers.runpod_console.definition import DEFINITION as RUNPOD_CONSOLE_DEFINITION
-    from providers.syntx.definition import DEFINITION as SYNTX_DEFINITION
-    from providers.tinyfish.definition import DEFINITION as TINYFISH_DEFINITION
-    from providers.upstage.definition import DEFINITION as UPSTAGE_DEFINITION
-    from providers.voyage.definition import DEFINITION as VOYAGE_DEFINITION
-    from providers.youmind.definition import DEFINITION as YOUMIND_DEFINITION
-
-    registry.register("groq", GROQ_DEFINITION, "providers.groq.adapter")
-    registry.register("syntx", SYNTX_DEFINITION, "providers.syntx.adapter")
-    registry.register("deepai", DEEPAI_DEFINITION, "providers.deepai.adapter")
-    registry.register("freebuff", FREEBUFF_DEFINITION, "providers.freebuff.adapter")
-    registry.register("youmind", YOUMIND_DEFINITION, "providers.youmind.adapter")
-    registry.register("ivycraft", IVYCRAFT_DEFINITION, "providers.ivycraft.adapter")
-    registry.register("llamacoder", LLAMACODER_DEFINITION, "providers.llamacoder.adapter")
-    registry.register("upstage", UPSTAGE_DEFINITION, "providers.upstage.adapter")
-    registry.register("voyage", VOYAGE_DEFINITION, "providers.voyage.adapter")
-    registry.register(
-        "runpod_console", RUNPOD_CONSOLE_DEFINITION, "providers.runpod_console.adapter"
-    )
-    registry.register("parallel", PARALLEL_DEFINITION, "providers.parallel.adapter")
-    registry.register("notegpt", NOTEGPT_DEFINITION, "providers.notegpt.adapter")
-    registry.register("overchat", OVERCHAT_DEFINITION, "providers.overchat.adapter")
-    registry.register("tinyfish", TINYFISH_DEFINITION, "providers.tinyfish.adapter")
-
-
+    registry.discover_packages()
 
 
 if __name__ == "__main__":  # pragma: no cover

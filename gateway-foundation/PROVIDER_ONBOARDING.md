@@ -1,10 +1,10 @@
 # Provider Onboarding — المسار الحالي وإضافة عملية جديدة
 
-**الحالة:** يدعم Gateway الآن Provider defaults وmodel overrides الاختيارية مع بقاء التسجيل صريحًا في `app.py`، ومن دون تحميل Plugins ديناميكي. إضافة Provider لعملية موجودة لا تتطلب تعديل SDK أو Agent Core.
+**الحالة:** يدعم Gateway Provider defaults وmodel overrides الاختيارية، ويكتشف حزم Providers تلقائيًا من مجلداتها عند التشغيل. إضافة Provider لعملية موجودة لا تتطلب تعديل SDK أو Agent Core أو قائمة مركزية في `app.py`.
 
 ## المبدأ
 
-إضافة Provider يدعم Operations موجودة يجب ألا تتطلب تغيير SDK أو Agent Core. التغيير محصور في Gateway، تعريف Provider/Model، Adapter، التسجيل والتوجيه، واختبارات تثبت الدعم. الإضافة لا تعني أن كل Model للمزوّد يدعم كل ما يستطيع المزوّد فعله.
+إضافة Provider يدعم Operations موجودة يجب ألا تتطلب تغيير SDK أو Agent Core. التغيير محصور في حزمة Provider داخل Gateway: Definition وAdapter واختبارات تثبت الدعم. يكتشف Gateway الحزمة تلقائيًا من مجلدها؛ الإضافة لا تعني أن كل Model للمزوّد يدعم كل ما يستطيع المزوّد فعله.
 
 في المسار المنفذ، العمليات والقدرات الافتراضية تكون على مستوى Provider إذا انطبقت على كل موديل. الحقل الاختياري `model.support` يذكر الاستثناء فقط؛ المزوّد الذي لا يملك استثناءات لا يكرر بيانات الدعم على كل موديل.
 
@@ -19,8 +19,8 @@
 1. إنشاء Provider package وتعريف عام له، مع `display_name`, `definition_version`, `credential_mode`, الموديلات والـOperations/Capabilities الافتراضية.
 2. أضف `model.support.operations` أو `model.support.capabilities` فقط للموديل الاستثنائي. البعد الغائب يرث Provider default؛ والبعد الموجود يستبدله كاملًا.
 3. تنفيذ `adapter.py` و`HANDLERS` لكل عمليات Provider الافتراضية واتحادات model overrides؛ لا stubs ولا دعم بالاستنتاج.
-4. تسجيل Provider صراحةً في `app.register_live_providers()`؛ هذا التسجيل اليدوي قائم حاليًا.
-5. إعداد `GW_ROUTE_MAP` و`GW_PROVIDER_ALLOWLIST` في نشر Gateway. القائمة فارغة افتراضيًا؛ اسم Provider لن يظهر في الكتالوج حتى يُسمح به ويكون له توجيه فعّال.
+4. ضع الحزمة المكتملة في `providers/<slug>/`؛ Gateway يكتشفها عند التشغيل ويُجري التحقق من Definition وHandler parity. لا تضف اسمها إلى قائمة في `app.py`.
+5. لا يلزم إدخال لكل Provider في `GW_PROVIDER_ALLOWLIST` أو `GW_ROUTE_MAP` لمسار الاسم والكتالوج. تبقى `GW_ROUTE_MAP` اختيارية فقط لعملاء `X-Route-Token` الأقدم.
 6. تشغيل اختبارات الوحدة والعقد والتكامل المحلي ومجموعة Provider المنفصلة حسب اعتمادياتها.
 7. التحقق أن Discovery يعرض الدعم الفعّال للموديل والاسم العام فقط، لا الـslug أو route token أو upstream identity.
 
@@ -31,7 +31,7 @@
 3. **Optional model overrides:** يضاف `model.support.operations` أو `model.support.capabilities` فقط للموديل المختلف؛ الحقل الموجود يستبدل default لذلك البعد، والغائب يرثه.
 4. **Adapter Implementation:** handler فعلي لكل Operation ضمن defaults أو أي override؛ لا stubs ولا دعم بالاستنتاج.
 5. **Capability claims:** استخدام مفاتيح Capability الحالية فقط عند ثبوت الدعم واختباره.
-6. **Gateway Registration & Routing:** التسجيل في آلية Gateway المعتمدة وإعداد التوجيه وقائمة السماح للنشر. لا نشر تلقائي أو تسجيل ذاتي من العميل.
+6. **Gateway Discovery & Routing:** يكتشف Gateway مجلدات Providers المكتملة تلقائيًا، ويتجاهل المجلدات ذات البادئة `_` أو `.`. لا يوجد تسجيل يدوي مركزي أو تسجيل ذاتي من العميل. خريطة التوجيه اختيارية لرموز `X-Route-Token` القديمة فقط.
 7. **Tests & Discovery Verification:** parity بين التعريف والـhandlers، اختبار نجاح وفشل لكل Operation، اختبار الموديلات والـoverrides، واختبار أن الكتالوج يعرض الدعم الفعلي ولا يسرّب معلومات داخلية.
 8. **No consumer edits:** لا إضافة alias أو Provider name أو Operation enum أو payload schema إلى SDK، ولا branch خاص بالمزوّد في Agent Core.
 
@@ -81,11 +81,11 @@ Gateway يعرض قيم الدعم الفعّالة في Discovery، ويفرض 
 - [ ] handler parity صحيح لكل عملية معلنة.
 - [ ] أخطاء upstream تُحوّل إلى أخطاء Gateway الآمنة المعتمدة.
 - [ ] لا أسرار أو route tokens أو slugs في output أو logs أو Discovery.
-- [ ] Name-based catalog/selection يعمل فقط ضمن allowlist والتوجيه الفعّال.
+- [ ] Name-based catalog/selection يعمل من Definition المكتشفة دون خريطة أو allowlist لكل Provider؛ المزود المعطّل فقط يُخفى.
 - [ ] مسار `X-Route-Token` القديم لا يتأثر إلا بقرار توافق منفصل.
 - [ ] اختبارات Provider والعقد والتكامل المحلي ناجحة؛ المتطلبات الخارجية مصنفة منفصلة.
 - [ ] لا تعديل خاص بالمزوّد في SDK أو Agent Core.
 
 ## حدود الأتمتة
 
-الحد الأدنى قليل التعقيد الآن هو تعريف موحد، Adapter convention، تسجيل واضح، واختبارات موحدة. لا نقترح Plugin discovery أو Registry إضافية أو واجهة تسجيل HTTP في هذه المسودة. يُعاد النظر في الأتمتة فقط إذا أثبتت إضافة Providers المتكررة أن التسجيل المركزي أصبح عبئًا، وبقرار مستقل لا يغيّر حدود الأمن.
+الأتمتة المنفذة محدودة وواضحة: فحص مجلدات Providers عند بدء Gateway، مع التحقق من التعريفات وhandler parity. لا توجد واجهة تسجيل HTTP أو تسجيل ذاتي من العميل؛ والعمليات والقدرات تظل ضمن العقد المشترك لا Registry إضافية خاصة بالمستهلك.

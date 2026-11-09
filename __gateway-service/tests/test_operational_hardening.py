@@ -221,7 +221,7 @@ class TestRotationDrill:
                 }
             )
 
-    def test_env_loader_defaults_provider_name_allowlist_to_empty(self) -> None:
+    def test_env_loader_needs_no_provider_route_configuration(self) -> None:
         config = load_config_from_env(
             {
                 "GW_SECRET_CURRENT": NEW_SECRET_V8,
@@ -229,29 +229,29 @@ class TestRotationDrill:
             }
         )
 
-        assert config.allowed_provider_slugs == frozenset()
+        assert config.route_map == {}
+        assert not hasattr(config, "allowed_provider_slugs")
 
-    def test_env_loader_parses_provider_name_allowlist(self) -> None:
-        config = load_config_from_env(
-            {
-                "GW_SECRET_CURRENT": NEW_SECRET_V8,
-                "GW_SECRET_CURRENT_VERSION": "8",
-                "GW_PROVIDER_ALLOWLIST": " groq, syntx ",
-            }
-        )
-
-        assert config.allowed_provider_slugs == frozenset({"groq", "syntx"})
-        assert "groq" not in repr(config)
-
-    def test_env_loader_rejects_duplicate_provider_name_allowlist(self) -> None:
-        with pytest.raises(ValueError, match="GW_PROVIDER_ALLOWLIST.*duplicate"):
+    def test_env_loader_rejects_obsolete_provider_allowlist(self) -> None:
+        with pytest.raises(ValueError, match="GW_PROVIDER_ALLOWLIST is obsolete"):
             load_config_from_env(
                 {
                     "GW_SECRET_CURRENT": NEW_SECRET_V8,
                     "GW_SECRET_CURRENT_VERSION": "8",
-                    "GW_PROVIDER_ALLOWLIST": "groq,groq",
+                    "GW_PROVIDER_ALLOWLIST": "groq,syntx",
                 }
             )
+
+    def test_env_loader_parses_optional_legacy_route_map(self) -> None:
+        config = load_config_from_env(
+            {
+                "GW_SECRET_CURRENT": NEW_SECRET_V8,
+                "GW_SECRET_CURRENT_VERSION": "8",
+                "GW_ROUTE_MAP": "legacy-token:groq",
+            }
+        )
+
+        assert config.route_map == {"legacy-token": "groq"}
 
 
 # --------------------------------------------------------------------------- #

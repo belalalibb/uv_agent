@@ -84,7 +84,6 @@ def _resolve_provider_or_response(
     routes: RouteRegistry,
     providers: ProviderRegistry,
     request: Request,
-    allowed_provider_slugs: frozenset[str],
 ) -> RegisteredProvider | JSONResponse:
     """Resolve a public name or legacy token; conceal all unknown route states."""
 
@@ -97,11 +96,7 @@ def _resolve_provider_or_response(
         if not provider_name.strip():
             return _bad_provider_selector_response()
         provider = providers.get_by_name(provider_name)
-        if (
-            provider is None
-            or provider.slug not in allowed_provider_slugs
-            or not routes.is_slug_routable(provider.slug)
-        ):
+        if provider is None or not routes.is_slug_enabled(provider.slug):
             return JSONResponse(status_code=404, content=UNKNOWN_ROUTE_BODY)
         return provider
 
@@ -146,10 +141,7 @@ def build_router(
         definitions = [
             provider.definition
             for provider in providers.all()
-            if (
-                provider.slug in config.allowed_provider_slugs
-                and routes.is_slug_routable(provider.slug)
-            )
+            if routes.is_slug_enabled(provider.slug)
         ]
         return JSONResponse(
             status_code=200,
@@ -164,9 +156,7 @@ def build_router(
         if denied is not None:
             return denied
 
-        resolved = _resolve_provider_or_response(
-            routes, providers, request, config.allowed_provider_slugs
-        )
+        resolved = _resolve_provider_or_response(routes, providers, request)
         if isinstance(resolved, JSONResponse):
             return resolved
         provider = resolved
@@ -268,9 +258,7 @@ def build_router(
         denied = _auth_or_response(config, request)
         if denied is not None:
             return denied
-        resolved = _resolve_provider_or_response(
-            routes, providers, request, config.allowed_provider_slugs
-        )
+        resolved = _resolve_provider_or_response(routes, providers, request)
         if isinstance(resolved, JSONResponse):
             return resolved
         return JSONResponse(
@@ -283,9 +271,7 @@ def build_router(
         denied = _auth_or_response(config, request)
         if denied is not None:
             return denied
-        resolved = _resolve_provider_or_response(
-            routes, providers, request, config.allowed_provider_slugs
-        )
+        resolved = _resolve_provider_or_response(routes, providers, request)
         if isinstance(resolved, JSONResponse):
             return resolved
         return JSONResponse(
@@ -298,9 +284,7 @@ def build_router(
         denied = _auth_or_response(config, request)
         if denied is not None:
             return denied
-        resolved = _resolve_provider_or_response(
-            routes, providers, request, config.allowed_provider_slugs
-        )
+        resolved = _resolve_provider_or_response(routes, providers, request)
         if isinstance(resolved, JSONResponse):
             return resolved
         return JSONResponse(

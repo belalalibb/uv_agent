@@ -4,14 +4,15 @@
 [project]
 name = "provider-gateway"
 version = "0.1.0"
-description = "Remote Provider Gateway — data plane (ADR-0008). G1 skeleton: no live providers."
+description = "Remote Provider Gateway — data plane with auto-discovered Providers (ADR-0008)."
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",
     "pydantic>=2.7",
     "uvicorn>=0.30",
     "filelock>=3.16",  # Syntx interprocess pool transactions
-    "httpx>=0.27",  # G3: live providers make real upstream calls (providers/groq)
+    "httpx>=0.27",  # Gateway transport and several live provider adapters
+    "requests>=2.32",  # Existing Provider adapters import requests at startup
 ]
 
 [project.optional-dependencies]

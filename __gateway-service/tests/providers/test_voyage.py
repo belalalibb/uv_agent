@@ -313,14 +313,13 @@ async def test_timeout_mapping(monkeypatch: pytest.MonkeyPatch) -> None:
 # --------------------------------------------------------------------------- #
 
 
-class TestLiveRegistrationAndWiring:
-    def test_register_live_providers_includes_voyage(self) -> None:
-        """Voyage AI must be registered in app.py and pass eager verification."""
-        from app import register_live_providers
+class TestPackageDiscoveryAndWiring:
+    def test_auto_discovery_includes_voyage(self) -> None:
+        """Voyage AI must be found from its package and pass eager verification."""
         from gateway.provider_registry import ProviderRegistry
 
         registry = ProviderRegistry()
-        register_live_providers(registry)
+        registry.discover_packages()
         registry.eager_verify_all()
         reg = registry.get("voyage")
         assert reg is not None
@@ -377,7 +376,7 @@ def test_models_metadata_integrity() -> None:
     from providers.voyage.definition import _MODELS_DATA
 
     assert len(_MODELS_DATA) >= 8
-    for m_id, meta in _MODELS_DATA.items():
+    for _m_id, meta in _MODELS_DATA.items():
         assert meta.get("context_window", 0) > 0
         if "dimensions" in meta:
             assert meta["dimensions"] in (512, 1024)
