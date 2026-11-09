@@ -26,6 +26,8 @@ from tests.conftest import (
     valid_envelope,
 )
 
+pytestmark = pytest.mark.integration
+
 # Test-only sentinels — never real credentials.
 NEW_SECRET_V8 = "unit-test-secret-version-eight!"
 SECOND_TOKEN = "rtk_unit_test_second_opaque_token"
@@ -216,6 +218,38 @@ class TestRotationDrill:
                     "GW_SECRET_CURRENT": NEW_SECRET_V8,
                     "GW_SECRET_CURRENT_VERSION": "8",
                     "GW_ROTATION_STARTED_AT": "not-a-number",
+                }
+            )
+
+    def test_env_loader_defaults_provider_name_allowlist_to_empty(self) -> None:
+        config = load_config_from_env(
+            {
+                "GW_SECRET_CURRENT": NEW_SECRET_V8,
+                "GW_SECRET_CURRENT_VERSION": "8",
+            }
+        )
+
+        assert config.allowed_provider_slugs == frozenset()
+
+    def test_env_loader_parses_provider_name_allowlist(self) -> None:
+        config = load_config_from_env(
+            {
+                "GW_SECRET_CURRENT": NEW_SECRET_V8,
+                "GW_SECRET_CURRENT_VERSION": "8",
+                "GW_PROVIDER_ALLOWLIST": " groq, syntx ",
+            }
+        )
+
+        assert config.allowed_provider_slugs == frozenset({"groq", "syntx"})
+        assert "groq" not in repr(config)
+
+    def test_env_loader_rejects_duplicate_provider_name_allowlist(self) -> None:
+        with pytest.raises(ValueError, match="GW_PROVIDER_ALLOWLIST.*duplicate"):
+            load_config_from_env(
+                {
+                    "GW_SECRET_CURRENT": NEW_SECRET_V8,
+                    "GW_SECRET_CURRENT_VERSION": "8",
+                    "GW_PROVIDER_ALLOWLIST": "groq,groq",
                 }
             )
 

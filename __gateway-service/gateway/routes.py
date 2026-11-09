@@ -3,17 +3,19 @@
 API surface (Deliverable C / OPEN-1):
     POST /v1/execute   auth   execute any declared operation (envelope
                               carries `operation` — single source of truth)
-    GET  /v1/describe  auth   manifest projection (per X-Route-Token)
+    GET  /v1/providers auth   catalog of enabled public provider names
+    GET  /v1/describe  auth   manifest selected by provider name or legacy token
     GET  /v1/models    auth   declared model list
     GET  /v1/health    auth   provider health (UNKNOWN is legal)
     GET  /healthz      none   process liveness only (no provider info)
 
-X-Route-Token is a HEADER on ALL surfaces including GETs (OPEN-3) — the
-token never appears in a URL. Route addressing exists ONLY via that header.
+New callers use X-Provider-Name. X-Route-Token remains a legacy selector and,
+when used, travels only in a header — never in a URL (OPEN-3). Exactly one
+provider selector may be present on provider-addressed surfaces.
 
 Status discipline (contracts.HTTP_STATUS_MAP): 200 carries both success and
-execution failures; 400 malformed envelope; 401 auth; 404 uniform unknown
-route (anti-enumeration); 500 sanitized internal fault.
+execution failures; 400 malformed envelope/conflicting selectors; 401 auth;
+404 uniform unknown route (anti-enumeration); 500 sanitized internal fault.
 
 Gateway-level retries: ZERO in v1 (billing integrity, ADR-0008).
 """
@@ -34,6 +36,7 @@ from gateway.context import build_context
 from gateway.contracts import (
     HEADER_GATEWAY_SECRET,
     HEADER_GATEWAY_SECRET_VERSION,
+    HEADER_PROVIDER_NAME,
     HEADER_ROUTE_TOKEN,
     UNKNOWN_ROUTE_BODY,
     ErrorCategory,
@@ -41,7 +44,13 @@ from gateway.contracts import (
     ResponseEnvelope,
 )
 from gateway.credentials import check_credential_mode
-from gateway.discovery import project_describe, project_health, project_models
+from gateway.discovery import (
+    project_catalog,
+    project_describe,
+    project_health,
+    project_model,
+    project_models,
+)
 from gateway.errors import internal_fault, make_error
 from gateway.provider_registry import ProviderRegistry, RegisteredProvider
 from gateway.route_registry import RouteRegistry
@@ -58,14 +67,45 @@ def _auth_or_response(config: GatewayConfig, request: Request) -> JSONResponse |
     return JSONResponse(status_code=401, content=auth_error_body(result))
 
 
+def _bad_provider_selector_response() -> JSONResponse:
+    return JSONResponse(
+        status_code=400,
+        content={
+            "error": {
+                "category": ErrorCategory.BAD_REQUEST.value,
+                "retryable": False,
+                "message": "provide exactly one provider selector",
+            }
+        },
+    )
+
+
 def _resolve_provider_or_response(
     routes: RouteRegistry,
     providers: ProviderRegistry,
     request: Request,
+    allowed_provider_slugs: frozenset[str],
 ) -> RegisteredProvider | JSONResponse:
-    """Uniform 404 for unknown/revoked/disabled — anti-enumeration."""
+    """Resolve a public name or legacy token; conceal all unknown route states."""
 
-    lookup = routes.lookup(request.headers.get(HEADER_ROUTE_TOKEN))
+    route_token = request.headers.get(HEADER_ROUTE_TOKEN)
+    provider_name = request.headers.get(HEADER_PROVIDER_NAME)
+    if route_token is not None and provider_name is not None:
+        return _bad_provider_selector_response()
+
+    if provider_name is not None:
+        if not provider_name.strip():
+            return _bad_provider_selector_response()
+        provider = providers.get_by_name(provider_name)
+        if (
+            provider is None
+            or provider.slug not in allowed_provider_slugs
+            or not routes.is_slug_routable(provider.slug)
+        ):
+            return JSONResponse(status_code=404, content=UNKNOWN_ROUTE_BODY)
+        return provider
+
+    lookup = routes.lookup(route_token)
     if not lookup.routable:
         return JSONResponse(status_code=404, content=UNKNOWN_ROUTE_BODY)
     provider = providers.get(lookup.slug or "")
@@ -98,6 +138,24 @@ def build_router(
         # Liveness ONLY: no provider info, no secrets, no versions.
         return {"status": "ok"}
 
+    @router.get(f"{prefix}/providers")
+    async def provider_catalog(request: Request) -> JSONResponse:
+        denied = _auth_or_response(config, request)
+        if denied is not None:
+            return denied
+        definitions = [
+            provider.definition
+            for provider in providers.all()
+            if (
+                provider.slug in config.allowed_provider_slugs
+                and routes.is_slug_routable(provider.slug)
+            )
+        ]
+        return JSONResponse(
+            status_code=200,
+            content=project_catalog(definitions).model_dump(),
+        )
+
     @router.post(f"{prefix}/execute")
     async def execute(request: Request) -> JSONResponse:
         started = time.monotonic()
@@ -106,7 +164,9 @@ def build_router(
         if denied is not None:
             return denied
 
-        resolved = _resolve_provider_or_response(routes, providers, request)
+        resolved = _resolve_provider_or_response(
+            routes, providers, request, config.allowed_provider_slugs
+        )
         if isinstance(resolved, JSONResponse):
             return resolved
         provider = resolved
@@ -141,12 +201,28 @@ def build_router(
         def latency() -> int:
             return int((time.monotonic() - started) * 1000)
 
-        # Undeclared operation -> 200 execution failure (example C).
-        if envelope.operation not in provider.definition.operations:
+        declared_model = next(
+            (
+                item
+                for item in provider.definition.models
+                if item.name == envelope.model
+            ),
+            None,
+        )
+        if declared_model is None:
+            # Unlisted or dynamically supplied model names retain the Provider
+            # defaults; only a declared model can carry a model-specific override.
+            supported_operations = provider.definition.operations
+        else:
+            supported_operations = project_model(
+                provider.definition, declared_model
+            ).operations
+
+        if envelope.operation not in supported_operations:
             failure = _failure(
                 {
                     "category": ErrorCategory.UNSUPPORTED_CAPABILITY,
-                    "message": "operation not declared by this provider",
+                    "message": "operation not declared for this model",
                 },
                 latency(),
             )
@@ -192,7 +268,9 @@ def build_router(
         denied = _auth_or_response(config, request)
         if denied is not None:
             return denied
-        resolved = _resolve_provider_or_response(routes, providers, request)
+        resolved = _resolve_provider_or_response(
+            routes, providers, request, config.allowed_provider_slugs
+        )
         if isinstance(resolved, JSONResponse):
             return resolved
         return JSONResponse(
@@ -205,7 +283,9 @@ def build_router(
         denied = _auth_or_response(config, request)
         if denied is not None:
             return denied
-        resolved = _resolve_provider_or_response(routes, providers, request)
+        resolved = _resolve_provider_or_response(
+            routes, providers, request, config.allowed_provider_slugs
+        )
         if isinstance(resolved, JSONResponse):
             return resolved
         return JSONResponse(
@@ -218,7 +298,9 @@ def build_router(
         denied = _auth_or_response(config, request)
         if denied is not None:
             return denied
-        resolved = _resolve_provider_or_response(routes, providers, request)
+        resolved = _resolve_provider_or_response(
+            routes, providers, request, config.allowed_provider_slugs
+        )
         if isinstance(resolved, JSONResponse):
             return resolved
         return JSONResponse(

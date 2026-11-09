@@ -19,6 +19,22 @@ from gateway.provider_registry import ProviderRegistry
 from gateway.route_registry import RouteRegistry
 from providers._example.definition import DEFINITION as EXAMPLE_DEFINITION
 
+
+def pytest_collection_modifyitems(items) -> None:
+    """Assign each Gateway test to one explicit, selectable test group."""
+    for item in items:
+        if item.get_closest_marker("external") or item.get_closest_marker("provider_env"):
+            item.add_marker(pytest.mark.external_provider)
+
+        if not any(
+            item.get_closest_marker(marker)
+            for marker in ("unit", "contract", "integration", "external_provider")
+        ):
+            # Hermetic unit/adapter tests are the default category. Tests with
+            # other prerequisites must opt into their marker explicitly.
+            item.add_marker(pytest.mark.unit)
+
+
 SECRET_V7 = "unit-test-secret-version-seven"
 SECRET_V6 = "unit-test-secret-version-six!"
 ROUTE_TOKEN = "rtk_unit_test_opaque_token_value"
@@ -31,6 +47,7 @@ def config() -> GatewayConfig:
         secrets_by_version={7: SECRET_V7, 6: SECRET_V6},
         current_secret_version=7,
         route_map={ROUTE_TOKEN: EXAMPLE_SLUG},
+        allowed_provider_slugs=frozenset({EXAMPLE_SLUG}),
         dual_accept_window_seconds=600,
     )
 

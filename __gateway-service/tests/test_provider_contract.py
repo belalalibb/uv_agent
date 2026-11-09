@@ -21,6 +21,8 @@ import pytest
 
 from gateway.contracts import CAPABILITY_KEYS
 
+pytestmark = pytest.mark.contract
+
 GATEWAY_ROOT = Path(__file__).resolve().parents[1]
 PROVIDERS_DIR = GATEWAY_ROOT / "providers"
 TESTS_DIR = GATEWAY_ROOT / "tests" / "providers"

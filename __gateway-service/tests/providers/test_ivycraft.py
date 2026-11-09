@@ -98,6 +98,7 @@ def test_ivycraft_handlers_parity():
     assert set(parsed.operations) == set(HANDLERS)
 
 
+@pytest.mark.provider_env
 def test_ivycraft_temp_domains_discovery():
     """Verify dynamic discovery of __دومينات مؤقته directory."""
     root = _core.discover_temp_domains_root()
@@ -147,6 +148,7 @@ async def test_ivycraft_payload_validation():
     assert res_sp.error.category is ErrorCategory.BAD_REQUEST
 
 
+@pytest.mark.provider_env
 @pytest.mark.asyncio
 async def test_ivycraft_hermetic_generate_text():
     """Hermetic generate_text with mocked SSE stream transport."""
@@ -168,6 +170,7 @@ async def test_ivycraft_hermetic_generate_text():
         _core.set_transport_override(None)
 
 
+@pytest.mark.provider_env
 @pytest.mark.asyncio
 async def test_ivycraft_hermetic_generate_image():
     """Hermetic generate_image with mock transport."""
@@ -190,6 +193,7 @@ async def test_ivycraft_hermetic_generate_image():
         _core.set_transport_override(None)
 
 
+@pytest.mark.provider_env
 @pytest.mark.asyncio
 async def test_ivycraft_hermetic_synthesize_speech():
     """Hermetic synthesize_speech with mock transport."""
@@ -211,6 +215,7 @@ async def test_ivycraft_hermetic_synthesize_speech():
         _core.set_transport_override(None)
 
 
+@pytest.mark.provider_env
 @pytest.mark.asyncio
 async def test_ivycraft_error_mapping():
     """Test mapping of upstream HTTP status codes to canonical categories."""

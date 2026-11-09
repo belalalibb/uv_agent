@@ -100,6 +100,7 @@ def test_schema_policing_vision_missing_fields() -> None:
     assert "image_b64" in res.error.message
 
 
+@pytest.mark.provider_env
 @pytest.mark.asyncio
 async def test_runpod_console_mocked_success(monkeypatch: pytest.MonkeyPatch) -> None:
     """Canonical success shape via mocked SSE stream transport."""
@@ -131,6 +132,7 @@ async def test_runpod_console_mocked_success(monkeypatch: pytest.MonkeyPatch) ->
     assert res.usage.units == 1
 
 
+@pytest.mark.provider_env
 @pytest.mark.asyncio
 async def test_runpod_console_analyze_vision_mocked_success(monkeypatch: pytest.MonkeyPatch) -> None:
     """Canonical analyze_vision success shape via mocked transport."""
@@ -160,6 +162,7 @@ async def test_runpod_console_analyze_vision_mocked_success(monkeypatch: pytest.
     assert res.usage.output_tokens > 0
 
 
+@pytest.mark.provider_env
 @pytest.mark.asyncio
 async def test_runpod_console_upstream_rate_limited(monkeypatch: pytest.MonkeyPatch) -> None:
     """HTTP 429 maps to ErrorCategory.RATE_LIMITED."""
@@ -176,6 +179,7 @@ async def test_runpod_console_upstream_rate_limited(monkeypatch: pytest.MonkeyPa
     assert res.error.retryable is True
 
 
+@pytest.mark.provider_env
 @pytest.mark.asyncio
 async def test_runpod_console_upstream_auth_expired(monkeypatch: pytest.MonkeyPatch) -> None:
     """HTTP 401 maps to ErrorCategory.AUTH_EXPIRED."""
@@ -191,6 +195,7 @@ async def test_runpod_console_upstream_auth_expired(monkeypatch: pytest.MonkeyPa
     assert res.error.category is ErrorCategory.AUTH_EXPIRED
 
 
+@pytest.mark.provider_env
 @pytest.mark.asyncio
 async def test_runpod_console_upstream_server_error(monkeypatch: pytest.MonkeyPatch) -> None:
     """HTTP 500 maps to ErrorCategory.RETRYABLE_SERVER_ERROR."""

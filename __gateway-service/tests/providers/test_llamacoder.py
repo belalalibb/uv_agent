@@ -94,6 +94,7 @@ async def test_llamacoder_payload_validation():
     assert res_vis.error.category is ErrorCategory.BAD_REQUEST
 
 
+@pytest.mark.external
 @pytest.mark.asyncio
 async def test_live_generate_text_deepseek():
     """Live text generation test using deepseek-v4.1."""
@@ -109,6 +110,7 @@ async def test_live_generate_text_deepseek():
     assert res.output.get("chat_id") is not None
 
 
+@pytest.mark.external
 @pytest.mark.asyncio
 async def test_live_file_attachment_code():
     """Live test attaching a Python file to chat conversation."""
@@ -133,6 +135,7 @@ async def test_live_file_attachment_code():
     assert "7788" in res.output["text"]
 
 
+@pytest.mark.external
 @pytest.mark.asyncio
 async def test_live_analyze_vision():
     """Live vision analysis test using analyze_vision handler with tiny test PNG."""
@@ -152,6 +155,7 @@ async def test_live_analyze_vision():
     assert len(res.output.get("text", "")) > 0
 
 
+@pytest.mark.provider_env
 @pytest.mark.asyncio
 async def test_audio_rejection_proof():
     fixtures_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "fixtures"))

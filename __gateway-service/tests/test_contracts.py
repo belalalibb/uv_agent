@@ -19,6 +19,8 @@ from gateway.contracts import (
     reject_excluded_operations,
 )
 
+pytestmark = pytest.mark.contract
+
 # The 12 categories, verbatim from core/contracts/provider.py (platform-led).
 PLATFORM_ERROR_CATEGORIES = [
     "auth_expired",
@@ -122,5 +124,43 @@ def test_definition_unknown_capability_key_rejected() -> None:
                 "credential_mode": "platform",
                 "capabilities": {"telepathy": True},
                 "operations": ["generate_text"],
+            }
+        )
+
+
+def test_model_support_override_rejects_unknown_capability_key() -> None:
+    with pytest.raises(ValidationError, match="unknown model capability keys"):
+        ProviderDefinition.model_validate(
+            {
+                "display_name": "X",
+                "definition_version": "1.0.0",
+                "credential_mode": "platform",
+                "operations": ["generate_text"],
+                "models": [
+                    {
+                        "name": "m",
+                        "support": {"capabilities": {"telepathy": True}},
+                    }
+                ],
+            }
+        )
+
+
+def test_model_support_override_rejects_duplicate_operations() -> None:
+    with pytest.raises(ValidationError, match="duplicate operations in model support"):
+        ProviderDefinition.model_validate(
+            {
+                "display_name": "X",
+                "definition_version": "1.0.0",
+                "credential_mode": "platform",
+                "operations": ["generate_text"],
+                "models": [
+                    {
+                        "name": "m",
+                        "support": {
+                            "operations": ["generate_text", "generate_text"]
+                        },
+                    }
+                ],
             }
         )

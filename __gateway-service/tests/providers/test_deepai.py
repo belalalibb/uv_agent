@@ -110,6 +110,7 @@ async def test_deepai_payload_validation():
     assert res_aud.error.category is ErrorCategory.BAD_REQUEST
 
 
+@pytest.mark.external
 @pytest.mark.asyncio
 async def test_live_generate_text_luna():
     """Live text generation test using default gpt-6-luna."""
@@ -124,6 +125,7 @@ async def test_live_generate_text_luna():
     assert res.output.get("session_id") is not None
 
 
+@pytest.mark.external
 @pytest.mark.asyncio
 async def test_live_generate_text_thinking_glm():
     """Live text generation test using glm-5.3-flash (supports thinking polling)."""
@@ -138,6 +140,7 @@ async def test_live_generate_text_thinking_glm():
     assert "42" in res.output["text"]
 
 
+@pytest.mark.external
 @pytest.mark.asyncio
 async def test_live_file_attachment_code():
     """Live test attaching a Python file to chat conversation using gpt-6-luna."""
@@ -160,6 +163,7 @@ async def test_live_file_attachment_code():
     assert "4242" in res.output["text"]
 
 
+@pytest.mark.external
 @pytest.mark.asyncio
 async def test_live_analyze_vision():
     """Live vision analysis test using analyze_vision handler with gpt-6-luna."""
@@ -178,6 +182,7 @@ async def test_live_analyze_vision():
     assert len(res.output.get("text", "")) > 0
 
 
+@pytest.mark.external
 @pytest.mark.asyncio
 async def test_live_transcribe_audio():
     """Live speech-to-text test using transcribe_audio handler."""
@@ -210,6 +215,7 @@ async def test_live_transcribe_audio():
         )
 
 
+@pytest.mark.external
 def test_deepai_sync_models_free_list():
     """Test that sync_models fetches free models with gpt-6-luna as the #1 default."""
     from providers.deepai.sync_models import fetch_free_models

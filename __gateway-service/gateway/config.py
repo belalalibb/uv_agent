@@ -21,6 +21,8 @@ class GatewayConfig:
     route_map: {route_token: internal_slug}. Reloadable without restart
       (route_registry). Provisioned OUT-OF-BAND only — no HTTP
       registration endpoint exists, by design.
+    allowed_provider_slugs: deployment allowlist for X-Provider-Name. Empty
+      by default, so a shared gateway secret alone grants no name-based route.
     """
 
     secrets_by_version: dict[int, str]
@@ -34,6 +36,8 @@ class GatewayConfig:
     #: expire at rotation_started_at + dual_accept_window_seconds.
     #: OPERATIONAL configuration — never domain identity.
     rotation_started_at: float | None = None
+    #: Provider slugs permitted through the name-based API. Empty means deny all.
+    allowed_provider_slugs: frozenset[str] = frozenset()
 
     def __repr__(self) -> str:
         """G4 leak fix: secret VALUES and route TOKENS never appear in repr.
@@ -46,6 +50,7 @@ class GatewayConfig:
             f"secret_versions={sorted(self.secrets_by_version)}, "
             f"current_secret_version={self.current_secret_version}, "
             f"route_count={len(self.route_map)}, "
+            f"allowed_provider_count={len(self.allowed_provider_slugs)}, "
             f"dual_accept_window_seconds={self.dual_accept_window_seconds}, "
             f"disabled_count={len(self.disabled_slugs)}, "
             f"rotation_started_at={self.rotation_started_at}, "
@@ -69,6 +74,17 @@ class GatewayConfig:
             if len(value) < 16:
                 msg = "GatewayConfig: gateway secret must be at least 16 characters"
                 raise ValueError(msg)
+        if any(
+            not isinstance(slug, str) or not slug.strip()
+            for slug in self.allowed_provider_slugs
+        ):
+            msg = "GatewayConfig: provider allowlist entries must be non-empty slugs"
+            raise ValueError(msg)
+        object.__setattr__(
+            self,
+            "allowed_provider_slugs",
+            frozenset(slug.strip() for slug in self.allowed_provider_slugs),
+        )
         if self.dual_accept_window_seconds < 0:
             msg = "GatewayConfig: dual_accept_window_seconds must be >= 0"
             raise ValueError(msg)
@@ -85,6 +101,7 @@ def load_config_from_env(environ: dict[str, str] | None = None) -> GatewayConfig
     GW_SECRET_PREVIOUS         previous secret value   (optional, rotation)
     GW_SECRET_PREVIOUS_VERSION integer version         (required if PREVIOUS set)
     GW_ROUTE_MAP               "token1:slug1,token2:slug2" (optional at boot)
+    GW_PROVIDER_ALLOWLIST      "slug1,slug2" (optional; default empty/deny)
     GW_DUAL_ACCEPT_WINDOW_S    seconds (optional, default 600 — OPEN-7)
     GW_ROTATION_STARTED_AT     epoch seconds the rotation began (optional;
                                set by the rotation runbook — enables window
@@ -124,6 +141,18 @@ def load_config_from_env(environ: dict[str, str] | None = None) -> GatewayConfig
                 raise ValueError(msg)
             route_map[token] = slug
 
+    raw_allowlist = env.get("GW_PROVIDER_ALLOWLIST", "").strip()
+    allowed_provider_slugs: frozenset[str] = frozenset()
+    if raw_allowlist:
+        allowlist_items = [item.strip() for item in raw_allowlist.split(",")]
+        if any(not item for item in allowlist_items):
+            msg = "GW_PROVIDER_ALLOWLIST entries must be non-empty slugs"
+            raise ValueError(msg)
+        if len(set(allowlist_items)) != len(allowlist_items):
+            msg = "GW_PROVIDER_ALLOWLIST must not contain duplicate slugs"
+            raise ValueError(msg)
+        allowed_provider_slugs = frozenset(allowlist_items)
+
     window_raw = env.get("GW_DUAL_ACCEPT_WINDOW_S", "600")
     if not window_raw.isdigit():
         msg = "GW_DUAL_ACCEPT_WINDOW_S must be a non-negative integer"
@@ -142,6 +171,7 @@ def load_config_from_env(environ: dict[str, str] | None = None) -> GatewayConfig
         secrets_by_version=secrets_by_version,
         current_secret_version=int(current_version_raw),
         route_map=route_map,
+        allowed_provider_slugs=allowed_provider_slugs,
         dual_accept_window_seconds=int(window_raw),
         rotation_started_at=rotation_started_at,
     )

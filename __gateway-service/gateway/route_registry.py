@@ -61,6 +61,12 @@ class RouteRegistry:
                 return RouteLookup(slug=None)
             return RouteLookup(slug=slug, disabled=slug in self._disabled)
 
+    def is_slug_routable(self, slug: str) -> bool:
+        """Whether an enabled route exists for a slug, without returning a token."""
+
+        with self._lock:
+            return slug not in self._disabled and slug in self._route_map.values()
+
     def reload(self, route_map: dict[str, str]) -> None:
         """Replace the whole map atomically — no restart required."""
 

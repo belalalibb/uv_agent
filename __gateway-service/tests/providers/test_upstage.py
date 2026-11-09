@@ -73,6 +73,7 @@ def test_upstage_handlers_parity():
     assert set(parsed.operations) == set(HANDLERS)
 
 
+@pytest.mark.provider_env
 def test_upstage_temp_domains_discovery():
     """Verify dynamic discovery and random loader of __دومينات مؤقته."""
     root = _core.discover_temp_domains_root()

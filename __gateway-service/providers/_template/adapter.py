@@ -60,7 +60,8 @@ timeout · 413/422/400 -> bad_request · 429 -> rate_limited (+retry_after_ms)
 block -> content_rejected · connection refused -> provider_unavailable.
 
 Fill in ONLY the operations you actually support; delete the rest; keep
-HANDLERS in exact parity with DEFINITION["operations"] (checked at startup).
+HANDLERS in exact parity with Provider defaults plus every model's
+`support.operations` override (checked at startup).
 """
 
 from __future__ import annotations
@@ -282,7 +283,7 @@ async def analyze_vision(context: ProviderContext) -> FacadeResult:
 
 
 # ═══════════════════════════════════════════════════════════════════════
-# HANDLERS — keep in EXACT parity with DEFINITION["operations"].
+# HANDLERS — keep in exact parity with Provider defaults and all model overrides.
 # Declared-without-handler OR handler-without-declaration = STARTUP failure.
 # An unsupported operation is NOT declared at all (no empty declared stubs
 # — declaration IS the source of eligibility). Delete unused stubs above.

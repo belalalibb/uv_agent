@@ -281,6 +281,7 @@ def test_parallel_fifo_queue_refill() -> None:
 
 # ─── 5. Full Wire Envelope Test via FastAPI TestClient ───────────────────────
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_parallel_full_wire_envelope_via_fastapi(monkeypatch: pytest.MonkeyPatch) -> None:
     """End-to-end wire envelope verification using FastAPI TestClient and mock seam."""

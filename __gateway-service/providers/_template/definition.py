@@ -4,8 +4,9 @@ RULES (deny-by-default — the registry trusts ONLY this declaration):
 
 - Declare ONLY what actually works. An undeclared operation simply does
   not exist for this provider (requests get `unsupported_capability`).
-- Every declared operation MUST have a handler in adapter.py HANDLERS,
-  and every handler MUST be declared here — mismatch = STARTUP failure.
+- Every Provider-default operation and every model override operation MUST
+  have a handler in adapter.py HANDLERS; extra handlers also fail startup.
+  Model overrides may add operations, so HANDLERS must cover their union.
 - Do NOT declare run_provider_agent / upload_asset / download_asset:
   they are excluded from Gateway v1 (ADR-0008 OPEN-2) and any DEFINITION
   declaring them is REJECTED AT LOAD TIME.
@@ -39,9 +40,18 @@ DEFINITION: dict[str, object] = {
     "operations": [
         # "generate_text",
     ],
-    # Declared models; [] is valid.
+    # Declared models; [] is valid. Each model inherits Provider defaults.
+    # Optional `support.operations` / `support.capabilities` replace that
+    # entire dimension for this model only; Discovery exposes resolved values.
     "models": [
         # {"name": "upstream-model-name", "context_window": 128000},
+        # {
+        #     "name": "vision-model",
+        #     "support": {
+        #         "operations": ["generate_text", "analyze_vision"],
+        #         "capabilities": {"chat": True, "vision_input": True},
+        #     },
+        # },
     ],
     # False => /v1/health answers UNKNOWN (honest).
     "health_supported": False,

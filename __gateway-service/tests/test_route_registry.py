@@ -38,3 +38,12 @@ def test_hot_reload_replaces_map_atomically() -> None:
     registry.reload({"tok_b": "slug_b"})
     assert not registry.lookup("tok_a").routable
     assert registry.lookup("tok_b").slug == "slug_b"
+
+
+def test_slug_routability_does_not_expose_token() -> None:
+    registry = RouteRegistry({"secret-token-a": "slug_a", "secret-token-b": "slug_a"})
+
+    assert registry.is_slug_routable("slug_a")
+    assert not registry.is_slug_routable("slug_b")
+    registry.set_disabled("slug_a", True)
+    assert not registry.is_slug_routable("slug_a")

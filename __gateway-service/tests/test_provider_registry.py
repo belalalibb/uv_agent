@@ -58,3 +58,62 @@ def test_invalid_definition_fails_eagerly() -> None:
 
 def test_unregistered_slug_lookup_is_none() -> None:
     assert ProviderRegistry().get("ghost") is None
+
+
+def test_public_name_lookup_is_case_insensitive() -> None:
+    registry = ProviderRegistry()
+    provider = _register_example(registry)
+
+    assert registry.get_by_name("  example provider (MOCK) ") is provider
+    assert registry.all() == (provider,)
+
+
+def test_similar_public_display_names_are_rejected_at_startup() -> None:
+    registry = ProviderRegistry()
+    _register_example(registry, slug="first")
+    duplicate = dict(EXAMPLE_DEFINITION)
+    duplicate["display_name"] = "  example provider (MOCK) "
+
+    with pytest.raises(ValueError, match="duplicate provider display name"):
+        registry.register("second", duplicate, "providers._example.adapter")
+
+
+def test_blank_public_display_name_is_startup_error() -> None:
+    definition = dict(EXAMPLE_DEFINITION)
+    definition["display_name"] = "   "
+
+    with pytest.raises(ValueError, match="display name must not be blank"):
+        ProviderRegistry().register("example_mock", definition, "providers._example.adapter")
+
+
+def test_model_specific_operation_must_have_a_provider_handler() -> None:
+    registry = ProviderRegistry()
+    definition = dict(EXAMPLE_DEFINITION)
+    definition["models"] = [
+        {
+            "name": "vision-model",
+            "support": {"operations": ["generate_text", "analyze_vision"]},
+        }
+    ]
+    provider = registry.register(
+        "model_override",
+        definition,
+        "providers._example.adapter",
+    )
+
+    with pytest.raises(ValueError, match="parity"):
+        provider.handlers()
+
+
+def test_excluded_operation_rejected_in_model_override_at_registration() -> None:
+    definition = dict(EXAMPLE_DEFINITION)
+    definition["models"] = [
+        {"name": "m", "support": {"operations": ["upload_asset"]}}
+    ]
+
+    with pytest.raises(ValueError, match="OPEN-2"):
+        ProviderRegistry().register(
+            "x",
+            definition,
+            "providers._example.adapter",
+        )
