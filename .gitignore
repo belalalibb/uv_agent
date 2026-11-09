@@ -17,3 +17,9 @@ venv/
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Large test media fixtures
+*.mp3
+*.ogg
+*.wav
+
