@@ -129,7 +129,7 @@ Every auto-generated `_core.py` conforms to the strict Layer 1 specifications:
 
 ## 🛡️ 5. The Bolla Quality Verification Triangle (Mandatory Gateway Gate)
 
-No provider may be registered into `gateway/app.py` without passing all 3 sides of the **Bolla Verification Triangle**:
+No Provider package may be treated as production-ready without passing all 3 sides of the **Bolla Verification Triangle**. Gateway discovers complete packages under `providers/` at startup; there is no per-Provider entry to add to `app.py`:
 
 ```
                   ▲

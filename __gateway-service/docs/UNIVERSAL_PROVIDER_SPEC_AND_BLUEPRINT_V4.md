@@ -160,7 +160,7 @@ sequenceDiagram
 | Rule | Requirement | Blueprint v4.0 Guarantee |
 |:---|:---|:---|
 | **Law #1** | Risk Classifier & Gate Protocol | Scaffolding creates isolated provider directory; no changes to core gateway contracts. |
-| **Law #3** | Sandboxing & Pre-Lab Testing | Standalone `test_scaffold.py` validates upstream connectivity before gateway registration. |
+| **Law #3** | Sandboxing & Pre-Lab Testing | Standalone `test_scaffold.py` validates upstream connectivity before the Provider package is relied on by Gateway auto-discovery. |
 | **Law #8** | Verbatim Ground-Truth Citation | All endpoints, headers, and schemas are extracted verbatim from raw HAR captures. |
 | **Law #9** | Single Source of Truth & Zero Regressions | All existing 171 Gateway unit tests remain 100% green; zero regression tolerance. |
 | **Law #10**| Zero Sprawl & Clean File Standard | Strict 4 Clean Files pattern; no auxiliary junk files permitted. |

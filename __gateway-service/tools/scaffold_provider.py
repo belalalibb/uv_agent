@@ -1,30 +1,29 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
-🏗️ Scaffold Generator — يولّد هيكل مزود جديد متكامل 100% مع Gateway Architecture & Bolla Constitution v1.2
+🏗️ Scaffold Generator — يولّد هيكل مزود جديد متكامل 100% مع Gateway Architecture
+& Bolla Constitution v1.2
 الاستخدام:
-    python tools/scaffold_provider.py <slug> [--display "Name"] [--lab] [--register]
+    python tools/scaffold_provider.py <slug> [--display "Name"] [--lab]
 
 المزايا القياسية المولدة تلقائياً:
-1. الحزمة الخماسية الإلزامية: (__init__.py, _core.py, adapter.py, definition.py, models_metadata.json)
+1. الحزمة الخماسية الإلزامية: (__init__.py, _core.py, adapter.py,
+   definition.py, models_metadata.json)
 2. رباعية المراسي التشفيرية (.anchor) الفورية لكل ملف.
 3. التزام قانون الصفر-متصفح (Zero-Browser Law: 100% Pure HTTP via curl_cffi / httpx).
-4. طابور التعبئة المتتابع الصارم للحسابات (FIFO Sequential Queue Refill: +5 accounts per ask via background worker).
+4. طابور التعبئة المتتابع الصارم للحسابات (FIFO Sequential Queue Refill:
+   +5 accounts per ask via background worker).
 5. حزمة اختبارات الوحدة المعزولة hermetic في tests/providers/test_{slug}.py.
-6. التسجيل التلقائي في app.py::register_live_providers (عند تفعيل --register).
+6. يكتشف Gateway الحزمة تلقائياً عند التشغيل من definition.py وadapter.py.
 """
 
-import sys
-import json
-import time
 import argparse
+import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PROVIDERS = ROOT / "providers"
 TESTS = ROOT / "tests" / "providers"
 LAB = ROOT.parent / ".AAA_GGG_iii_VIBE_CODING_مجلد_المزودين"
-APP_PY = ROOT / "app.py"
 
 CORE_TEMPLATE = '''#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
@@ -123,7 +122,10 @@ def enqueue_account_refill(count: int = 5) -> None:
     _ensure_worker_running()
     for _ in range(count):
         _ACCOUNT_REFILL_QUEUE.put(1)
-    logger.info(f"[{disp}] Enqueued {{count}} accounts for sequential background refill. Queue size: {{_ACCOUNT_REFILL_QUEUE.qsize()}}")
+    logger.info(
+        f"[{disp}] Enqueued {{count}} accounts for sequential background refill. "
+        f"Queue size: {{_ACCOUNT_REFILL_QUEUE.qsize()}}"
+    )
 
 
 def _create_single_account() -> dict:
@@ -261,7 +263,9 @@ async def generate_text(context: ProviderContext) -> FacadeResult:
     except Exception:
         return FacadeResult(
             succeeded=False,
-            error=make_error(ErrorCategory.RETRYABLE_SERVER_ERROR, "upstream communication failure"),
+            error=make_error(
+                ErrorCategory.RETRYABLE_SERVER_ERROR, "upstream communication failure"
+            ),
         )
 
 
@@ -445,7 +449,9 @@ def refresh_session(account_info: dict) -> dict:
     return account_info
 
 
-def execute_chat(prompt: str, session_data: dict, model: str = "default", stream: bool = True) -> str:
+def execute_chat(
+    prompt: str, session_data: dict, model: str = "default", stream: bool = True
+) -> str:
     return f"[{disp}] Response: {{prompt}}"
 
 
@@ -472,80 +478,55 @@ def write_file_and_anchor(p: Path, content: str, make_anchor: bool = True) -> No
             print(f"  ⚓ إنشاء مرساة: {anchor_path.relative_to(ROOT.parent)}")
 
 
-def register_in_app_py(slug: str) -> bool:
-    """Insert provider into app.py::register_live_providers if not already present."""
-    if not APP_PY.exists():
-        return False
-
-    content = APP_PY.read_text(encoding="utf-8")
-    slug_upper = slug.upper().replace("-", "_")
-
-    import_line = f"    from providers.{slug}.definition import DEFINITION as {slug_upper}_DEFINITION"
-    register_line = f'    registry.register("{slug}", {slug_upper}_DEFINITION, "providers.{slug}.adapter")'
-
-    if import_line in content or f'"{slug}"' in content:
-        print(f"  ⏭️  المزود مسجل مسبقاً في app.py")
-        return False
-
-    # Insert import before registry.register calls
-    lines = content.splitlines()
-    reg_fn_idx = -1
-    last_reg_idx = -1
-
-    for idx, line in enumerate(lines):
-        if "def register_live_providers(" in line:
-            reg_fn_idx = idx
-        if reg_fn_idx != -1 and "registry.register(" in line:
-            last_reg_idx = idx
-
-    if reg_fn_idx == -1 or last_reg_idx == -1:
-        print("  ⚠️ تعذر العثور على موضع الإدراج التلقائي في app.py")
-        return False
-
-    # Find the last import line in register_live_providers
-    last_import_idx = -1
-    for idx in range(reg_fn_idx, last_reg_idx):
-        if "from providers." in lines[idx]:
-            last_import_idx = idx
-
-    if last_import_idx != -1:
-        lines.insert(last_import_idx + 1, import_line)
-        # Shift last_reg_idx by 1
-        last_reg_idx += 1
-        lines.insert(last_reg_idx + 1, register_line)
-    else:
-        lines.insert(last_reg_idx + 1, register_line)
-
-    new_content = "\n".join(lines) + "\n"
-    APP_PY.write_text(new_content, encoding="utf-8")
-    print(f"  🔌 تم تسجيل المزود بنجاح في app.py::register_live_providers")
-    return True
-
-
 def main():
     ap = argparse.ArgumentParser(
-        description="Scaffold a new Gateway provider compliant with Bolla Constitution v1.2, Zero-Browser, and Contract Invariants"
+        description=(
+            "Scaffold a new Gateway provider compliant with Bolla Constitution v1.2, "
+            "Zero-Browser, and Contract Invariants"
+        )
     )
-    ap.add_argument("slug", help="Slug identifier for the provider (e.g., stepfun, perplexity)")
-    ap.add_argument("--display", default=None, help="Display name for the provider (e.g., 'StepFun AI')")
-    ap.add_argument("--lab", action="store_true", help="Also generate the standalone lab script in .AAA_GGG_iii_VIBE_CODING")
-    ap.add_argument("--register", action="store_true", help="Automatically register provider in app.py")
+    ap.add_argument(
+        "slug", help="Slug identifier for the provider (e.g., stepfun, perplexity)"
+    )
+    ap.add_argument(
+        "--display", default=None, help="Display name for the provider (e.g., 'StepFun AI')"
+    )
+    ap.add_argument(
+        "--lab",
+        action="store_true",
+        help="Also generate the standalone lab script in .AAA_GGG_iii_VIBE_CODING",
+    )
+    ap.add_argument("--register", action="store_true", help=argparse.SUPPRESS)  # deprecated no-op
     a = ap.parse_args()
 
-    slug = a.slug.strip().lower().replace(" ", "-")
-    disp = a.display or slug.replace("-", " ").title()
+    slug = a.slug.strip().lower().replace("-", "_").replace(" ", "_")
+    if not slug.isidentifier() or slug.startswith("_"):
+        ap.error(
+            "slug must be a non-underscore Python identifier for auto-discovery"
+        )
+    disp = a.display or slug.replace("_", " ").title()
     d = PROVIDERS / slug
 
-    print(f"\n=======================================================")
+    print("\n=======================================================")
     print(f"🏗️  توليد هيكل المزود المتكامل: {slug} ({disp})")
-    print(f"   المرجع الدستوري: .agents/workflows/00-gateway-provider-onboarding.md")
-    print(f"=======================================================\n")
+    print("   المرجع الدستوري: .agents/workflows/00-gateway-provider-onboarding.md")
+    print("=======================================================\n")
 
     # 1. Core 5 files + 4 anchors
-    write_file_and_anchor(d / "__init__.py", "from .definition import DEFINITION  # noqa\n", make_anchor=False)
-    write_file_and_anchor(d / "_core.py", CORE_TEMPLATE.format(slug=slug, disp=disp), make_anchor=True)
-    write_file_and_anchor(d / "adapter.py", ADAPTER_TEMPLATE.format(slug=slug, disp=disp), make_anchor=True)
-    write_file_and_anchor(d / "definition.py", DEFINITION_TEMPLATE.format(slug=slug, disp=disp), make_anchor=True)
+    write_file_and_anchor(
+        d / "__init__.py",
+        "from .definition import DEFINITION  # noqa\n",
+        make_anchor=False,
+    )
+    write_file_and_anchor(
+        d / "_core.py", CORE_TEMPLATE.format(slug=slug, disp=disp), make_anchor=True
+    )
+    write_file_and_anchor(
+        d / "adapter.py", ADAPTER_TEMPLATE.format(slug=slug, disp=disp), make_anchor=True
+    )
+    write_file_and_anchor(
+        d / "definition.py", DEFINITION_TEMPLATE.format(slug=slug, disp=disp), make_anchor=True
+    )
     write_file_and_anchor(
         d / "models_metadata.json",
         json.dumps(META_DEFAULT, ensure_ascii=False, indent=2) + "\n",
@@ -554,24 +535,42 @@ def main():
 
     # 2. Hermetic Unit Test Suite
     test_file = TESTS / f"test_{slug}.py"
-    write_file_and_anchor(test_file, TEST_TEMPLATE.format(slug=slug, disp=disp), make_anchor=False)
+    write_file_and_anchor(
+        test_file,
+        TEST_TEMPLATE.format(slug=slug, disp=disp),
+        make_anchor=False,
+    )
 
     # 3. Lab Script (optional)
     if a.lab:
         lab_file = LAB / slug / f"{slug}_lab.py"
-        write_file_and_anchor(lab_file, LAB_TEMPLATE.format(slug=slug, disp=disp), make_anchor=False)
+        write_file_and_anchor(
+            lab_file,
+            LAB_TEMPLATE.format(slug=slug, disp=disp),
+            make_anchor=False,
+        )
 
-    # 4. Auto Register in app.py
+    # 4. Provider packages are detected from their folders at Gateway startup.
     if a.register:
-        register_in_app_py(slug)
+        print(
+            "\nℹ️ --register is deprecated and ignored; "
+            "Gateway discovers the package automatically."
+        )
     else:
-        print(f"\n💡 للتسجيل التلقائي في app.py أعد التشغيل مع --register أو أضف الأسطر يدوياً:")
-        slug_upper = slug.upper().replace("-", "_")
-        print(f"    from providers.{slug}.definition import DEFINITION as {slug_upper}_DEFINITION")
-        print(f'    registry.register("{slug}", {slug_upper}_DEFINITION, "providers.{slug}.adapter")')
+        print(
+            "\n✅ Gateway will auto-discover this package at startup; "
+            "no app.py edit is needed."
+        )
+    print(
+        "   X-Provider-Name routing does not require per-provider "
+        "route-map or allowlist entries."
+    )
 
-    print(f"\n🎯 التحقق واختبار العقد:")
-    print(f"   py -3.13 -m pytest tests/test_provider_contract.py tests/providers/test_{slug}.py -v\n")
+    print("\n🎯 التحقق واختبار العقد:")
+    print(
+        f"   py -3.13 -m pytest tests/test_provider_contract.py "
+        f"tests/providers/test_{slug}.py -v\n"
+    )
 
 
 if __name__ == "__main__":

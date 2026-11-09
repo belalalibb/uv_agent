@@ -370,16 +370,15 @@ class TestNoLeak:
 
 
 # ------------------------------------------------------------------------- #
-# Live registration wiring (app.py main() path, verified hermetically)       #
-# ------------------------------------------------------------------------- #
+# Automatic package discovery wiring                                          #
+# --------------------------------------------------------------------------- #
 
 
-class TestLiveRegistration:
-    def test_register_live_providers_passes_eager_verification(self) -> None:
-        from app import register_live_providers
+class TestPackageDiscovery:
+    def test_discovery_passes_eager_verification(self) -> None:
         from gateway.provider_registry import ProviderRegistry
 
         registry = ProviderRegistry()
-        register_live_providers(registry)
+        registry.discover_packages()
         registry.eager_verify_all()  # DEFINITION valid + HANDLERS parity
         assert registry.get("groq") is not None

@@ -47,7 +47,6 @@ def config() -> GatewayConfig:
         secrets_by_version={7: SECRET_V7, 6: SECRET_V6},
         current_secret_version=7,
         route_map={ROUTE_TOKEN: EXAMPLE_SLUG},
-        allowed_provider_slugs=frozenset({EXAMPLE_SLUG}),
         dual_accept_window_seconds=600,
     )
 

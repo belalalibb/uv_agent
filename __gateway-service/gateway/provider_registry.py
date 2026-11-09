@@ -1,13 +1,12 @@
 """Provider registry — package discovery + eager DEFINITION validation.
 
 Rules (ADR-0008 / report §11):
-- Auto-discovery of packages under ``providers/`` (skip ``_``-prefixed:
-  ``_template`` and ``_example`` are reference material, never live).
-- Discovery != activation: a discovered provider with no route_token
-  mapping is simply unreachable (deny-by-default extends across the wire).
-- Eager DEFINITION validation at startup; LAZY facade import at first
-  dispatch (heavy SDK imports don't block boot; lying DEFINITIONs still
-  fail loud at startup).
+- Discover provider packages directly under ``providers/`` at startup; skip
+  dot/underscore-prefixed reference folders.
+- Provider names and manifest data come from each package's folder and
+  ``definition.py``. Name-based routing needs no per-provider route-map entry.
+- Eager DEFINITION validation at startup and lazy facade imports until
+  ``eager_verify_all`` checks handlers.
 - OPEN-2 excluded operations in a DEFINITION = startup refusal.
 - Provider-default operations plus model-specific operation overrides form
   the declared handler set; a missing or extra facade handler is a STARTUP
@@ -21,6 +20,7 @@ import importlib
 import threading
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from gateway.contracts import (
     FacadeResult,
@@ -120,6 +120,73 @@ class ProviderRegistry:
         )
         self._providers[slug] = provider
         return provider
+
+    def discover_packages(
+        self,
+        providers_root: str | Path | None = None,
+        *,
+        package_prefix: str = "providers",
+    ) -> tuple[RegisteredProvider, ...]:
+        """Load every complete Provider package below ``providers_root``.
+
+        Each immediate child folder is one Provider: its folder name is the
+        private slug, ``definition.py`` must export a DEFINITION mapping, and
+        ``adapter.py`` must export HANDLERS. Dot/underscore-prefixed folders
+        are ignored for templates and development material. No central list
+        or per-Provider routing environment variables are needed.
+
+        Any non-hidden child directory must be a complete Provider package;
+        incomplete folders fail startup rather than silently disappearing
+        from the catalog. The directory contents are trusted application
+        code; adapters are imported by the startup parity check.
+        """
+        root = (
+            Path(providers_root)
+            if providers_root is not None
+            else Path(__file__).resolve().parent.parent / "providers"
+        )
+        if not root.is_dir():
+            raise ValueError(f"Provider package directory does not exist: {root}")
+
+        importlib.invalidate_caches()
+        for package_dir in sorted(root.iterdir(), key=lambda item: item.name):
+            if (
+                not package_dir.is_dir()
+                or package_dir.is_symlink()
+                or package_dir.name.startswith((".", "_"))
+            ):
+                continue
+
+            definition_path = package_dir / "definition.py"
+            adapter_path = package_dir / "adapter.py"
+            has_definition = definition_path.is_file()
+            has_adapter = adapter_path.is_file()
+            if not has_definition or not has_adapter:
+                missing = "definition.py" if not has_definition else "adapter.py"
+                raise ValueError(
+                    f"Provider package {package_dir.name!r} is missing {missing}"
+                )
+            if not package_dir.name.isidentifier():
+                raise ValueError(
+                    f"Provider folder {package_dir.name!r} must be a Python identifier"
+                )
+
+            definition_module_name = (
+                f"{package_prefix}.{package_dir.name}.definition"
+            )
+            definition_module = importlib.import_module(definition_module_name)
+            raw_definition = getattr(definition_module, "DEFINITION", None)
+            if not isinstance(raw_definition, dict):
+                raise ValueError(
+                    f"{definition_module_name} must export a DEFINITION mapping"
+                )
+            self.register(
+                package_dir.name,
+                raw_definition,
+                f"{package_prefix}.{package_dir.name}.adapter",
+            )
+
+        return self.all()
 
     def get(self, slug: str) -> RegisteredProvider | None:
         return self._providers.get(slug)

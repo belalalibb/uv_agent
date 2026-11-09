@@ -31,10 +31,10 @@
 ### 3. Discovery وSecurity
 
 - المسارات الحالية: `GET /v1/providers`, `GET /v1/describe`, `GET /v1/models`, `GET /v1/health`, `POST /v1/execute`, و`GET /healthz`.
-- `/v1/providers` يُظهر الاسم العام وتعريفه فقط للمزوّد المسجل والمفعّل والموجّه والموجود في `GW_PROVIDER_ALLOWLIST`. القائمة فارغة افتراضيًا. لا تُكشف slugs الداخلية أو route tokens.
-- اختيار `X-Provider-Name` مقيّد بالقائمة؛ `X-Route-Token` القديم مسار منفصل يتطلب سر Gateway وربطًا نشطًا، ولا يخضع للقائمة وفق سياسة التوافق الحالية. لا يقبل الطلب محددي اختيار معًا.
-- هذه حدود نشر Gateway؛ سر Gateway لخدمة خلفية موثوقة وليس لمتصفح أو تطبيق عميل.
-- `tenant_id` مطلوب في RequestEnvelope، وله قيمة افتراضية `default_platform_tenant` في SDK، ويمرره Gateway إلى ProviderContext. التعليق التعاقدي الحالي يصفه صراحةً بأنه evidence/audit فقط؛ لا توجد هوية tenant موثوقة أو صلاحيات/عزل per-tenant. لا ينبغي اعتباره authorization، كما أن `GW_PROVIDER_ALLOWLIST` مشتركة على مستوى نشر Gateway.
+- `/v1/providers` يعرض كل Provider مكتشف ومفعّل من مجلدات `providers/` دون الحاجة إلى `GW_ROUTE_MAP` أو allowlist لكل Provider. لا تُكشف slugs الداخلية أو route tokens.
+- اختيار `X-Provider-Name` يحل الاسم العام من تعريفات الحزم المكتشفة ويتطلب سر Gateway فقط؛ `X-Route-Token` القديم مسار منفصل يتطلب سر Gateway وربطًا نشطًا في `GW_ROUTE_MAP` الاختيارية. لا يقبل الطلب محددي اختيار معًا. القيمة غير الفارغة القديمة لـ`GW_PROVIDER_ALLOWLIST` مرفوضة عند بدء الخدمة.
+- هذه حدود نشر Gateway؛ سر Gateway لخدمة خلفية موثوقة وليس لمتصفح أو تطبيق عميل. كل حامل للسر يشارك صلاحيات كل Providers المكتشفة والمفعّلة في النشر؛ لا يوجد تفويض لكل مستخدم في v1.
+- `tenant_id` مطلوب في RequestEnvelope، وله قيمة افتراضية `default_platform_tenant` في SDK، ويمرره Gateway إلى ProviderContext. التعليق التعاقدي الحالي يصفه صراحةً بأنه evidence/audit فقط؛ لا توجد هوية tenant موثوقة أو صلاحيات/عزل per-tenant. لا ينبغي اعتباره authorization؛ سر Gateway مشترك على مستوى النشر ويتيح Providers المكتشفة والمفعّلة.
 
 ### 4. Streaming وJobs وAssets
 
@@ -56,9 +56,9 @@
 
 ### 6. إضافة Provider في خط الأساس
 
-- `app.register_live_providers()` يستورد ويسجل قائمة صريحة من 14 Provider. `ProviderRegistry` يوفّر `register()` والتحقق من التعريف وتكافؤ العمليات مع `HANDLERS`، لكنه لا يضيف وحده Provider جديدًا إلى تركيب التطبيق.
-- يلزم حاليًا تحديث القائمة المركزية، وإعداد `GW_ROUTE_MAP` و`GW_PROVIDER_ALLOWLIST` للنشر، واختبارات Provider/Contract/Discovery. لا يلزم تحديث SDK لإضافة Provider يدعم Operation موجودة.
-- يوجد اختلاف بين وصف `ProviderRegistry` الذي يذكر Auto-discovery وبين تركيب التطبيق الفعلي الذي يستعمل قائمة `register_live_providers()` صريحة؛ يجب توحيد التوثيق أو السلوك في قرار لاحق، لا افتراض وجود تحميل ديناميكي.
+- `ProviderRegistry.discover_packages()` يمسح مجلدات Providers تلقائيًا، ويتجاهل `_example` و`_template` وسائر المجلدات ذات البادئة `_`/`.`؛ يتحقق من `definition.py` ويختبر parity مع `adapter.py`. لا توجد قائمة Providers ثابتة في `app.py`.
+- يلزم إضافة حزمة Provider مكتملة واختبارها فقط. لا يلزم تحديث SDK أو إعداد `GW_ROUTE_MAP`/`GW_PROVIDER_ALLOWLIST` لمسار الاسم؛ الخريطة اختيارية للتوافق القديم مع `X-Route-Token`.
+- اكتشاف مجلدات Providers صار جزءًا من تركيب التطبيق الفعلي؛ أي مجلد Provider مكتمل وغير محجوب يُسجل تلقائيًا عند بدء Gateway.
 
 ## مصفوفة المزوّدين المسجلين حاليًا
 
@@ -91,7 +91,7 @@
 4. **مؤجلة:** عقد Streaming وJobs عامة، بما فيها الحالة والنتيجة والإلغاء.
 5. **مؤجلة:** Asset Reference وآلية الملكية والوصول وانتهاء الصلاحية.
 6. **أُغلقت لدعم Model الحالي:** حقلا `operations` و`capabilities` معلنان صراحةً في Discovery. ما زال أي حقل Discovery مستقبلي يحتاج تغيير عقد Gateway؛ SDK يمرر ما يتلقاه ولا يتحكم بما يصدره الخادم.
-7. **محددة في الوثائق:** Provider onboarding يذكر التسجيل المركزي الصريح في `register_live_providers()` وإعداد التوجيه والقائمة؛ لا يوجد تحميل Plugins تلقائي.
+7. **أُغلقت في التنفيذ:** Provider onboarding يصف الاكتشاف التلقائي من مجلدات الحزم؛ لا حاجة لقائمة مركزية أو إدخالات إعداد لكل Provider.
 8. **كما هو:** `health_supported` لا يطلق probe حاليًا؛ `project_health()` يرجع `UNKNOWN`.
 9. **كما هو:** `tenant_id` سياق audit فقط؛ لا يوجد تفويض أو عزل لكل tenant داخل نشر Gateway مشترك.
 10. **مؤجل بلا حاجة مثبتة:** اسم Model المتكرر يظل مرتبطًا بكل Provider؛ لا معرّف عالمي.

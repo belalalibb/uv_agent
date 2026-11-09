@@ -54,7 +54,7 @@
 
 ## 5. مصفوفة التعريفات الحالية
 
-الجرد الفعلي للـ14 Provider المسجلين في `app.register_live_providers()` موجود في [`CURRENT_CONTRACT_REVIEW.md`](CURRENT_CONTRACT_REVIEW.md). المصفوفة مشتقة من تعريفات المزوّدين وملفات metadata في الفرع، وليست قائمة SDK ولا وعدًا بأن كل Model يطبق كل عملية Provider-level.
+جرد الحزم المكتشفة حاليًا (14 مجلد Provider مكتملًا) موجود في [`CURRENT_CONTRACT_REVIEW.md`](CURRENT_CONTRACT_REVIEW.md). المصفوفة مشتقة من التعريفات وملفات metadata في الفرع، وليست قائمة في SDK ولا وعدًا بأن كل Model يطبق كل عملية Provider-level.
 
 ## 6. معيار ترقية مرشح إلى Operation أساسية
 

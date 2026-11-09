@@ -1,12 +1,15 @@
-"""Route registry — route_token -> internal slug. Reloadable WITHOUT restart.
+"""Legacy route-token registry — token -> internal slug.
 
-5-layer identity model (ADR-0008): the route_token is an opaque platform-
-issued CREDENTIAL (not a name); the slug is gateway-private and NEVER
-crosses the boundary. No derivation exists between layers.
+This map is optional and exists only for older ``X-Route-Token`` callers.
+Normal ``X-Provider-Name`` routing resolves discovered package definitions
+and does not consult the map. The route_token is an opaque platform-issued
+credential (not a name); the slug is gateway-private and NEVER crosses the
+boundary. No derivation exists between layers.
 
 Anti-enumeration: lookups distinguish nothing externally — unknown,
 revoked and disabled tokens all yield the same uniform 404 body
-(``contracts.UNKNOWN_ROUTE_BODY``). The distinction here is internal only.
+(``contracts.UNKNOWN_ROUTE_BODY``). Provider disablement also applies to
+name-based routing and catalog visibility.
 """
 
 from __future__ import annotations
@@ -62,10 +65,16 @@ class RouteRegistry:
             return RouteLookup(slug=slug, disabled=slug in self._disabled)
 
     def is_slug_routable(self, slug: str) -> bool:
-        """Whether an enabled route exists for a slug, without returning a token."""
+        """Whether an enabled legacy token route exists for a slug."""
 
         with self._lock:
             return slug not in self._disabled and slug in self._route_map.values()
+
+    def is_slug_enabled(self, slug: str) -> bool:
+        """Whether a discovered Provider is enabled for name-based routing."""
+
+        with self._lock:
+            return slug not in self._disabled
 
     def reload(self, route_map: dict[str, str]) -> None:
         """Replace the whole map atomically — no restart required."""

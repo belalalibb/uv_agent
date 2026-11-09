@@ -1,7 +1,7 @@
 # Provider Gateway Service
 
 The Gateway is a server-side data plane that exposes a common HTTP contract
-for registered Provider adapters. Its code contract is
+for auto-discovered Provider adapters. Its code contract is
 [`gateway/contracts.py`](gateway/contracts.py); the wire-level specification
 and Provider runbook are in [`docs/CONTRACT.md`](docs/CONTRACT.md) and
 [`docs/ONBOARDING.md`](docs/ONBOARDING.md).
@@ -23,15 +23,16 @@ and Provider runbook are in [`docs/CONTRACT.md`](docs/CONTRACT.md) and
   model. An unlisted model name retains the existing Provider-default
   behavior. Capability values are descriptive metadata; the v1 Runtime gate
   is operation support.
-- Provider registration is explicit in `app.register_live_providers()`;
-  process startup verifies Definition/`HANDLERS` parity. Routing still
-  requires deployment configuration. There is no assumption of automatic
-  plugin discovery or registration.
-- Name-based catalog/selection uses the Gateway's `GW_PROVIDER_ALLOWLIST`
-  and active route map. The allowlist is empty by default. The legacy
-  `X-Route-Token` selector remains available during the compatibility period,
-  requires the trusted Gateway secret and an active route mapping, and is not
-  gated by the name-based allowlist. A request must not send both selectors.
+- Process startup automatically discovers complete, non-hidden packages under
+  `providers/` from their `definition.py` and `adapter.py` files, validates
+  definitions, and verifies Definition/`HANDLERS` parity. Adding a Provider
+  requires no central list in `app.py`.
+- Name-based catalog/selection uses the discovered package definitions and
+  needs no per-Provider `GW_PROVIDER_ALLOWLIST` or route-map entry. The
+  optional `GW_ROUTE_MAP` is only for legacy `X-Route-Token` clients and
+  requires the shared Gateway secret plus a token-to-slug mapping. A non-empty
+  `GW_PROVIDER_ALLOWLIST` is obsolete and rejected. A request must not send
+  both selectors.
 - `/v1/health` currently reports `UNKNOWN`; no independent upstream health
   probe is performed. Streaming, Jobs, Assets, video, and Agent Core are not
   implemented by this Gateway v1 scope.
@@ -39,11 +40,22 @@ and Provider runbook are in [`docs/CONTRACT.md`](docs/CONTRACT.md) and
 The Gateway secret is for a trusted backend service only. Do not place it in
 browser code or an end-user application.
 
+## Service configuration
+
+Set `GW_SECRET_CURRENT` and `GW_SECRET_CURRENT_VERSION` in the Gateway
+process environment; the launcher has no built-in development secret. No
+Provider-specific environment variables are needed for catalog discovery or
+name-based routing. `GW_ROUTE_MAP` is optional and is read only when keeping
+legacy `X-Route-Token` clients working. Remove any non-empty
+`GW_PROVIDER_ALLOWLIST`; that retired setting is rejected at startup. On the
+SDK side, `GATEWAY_URL` and `GATEWAY_API_KEY` remain the common connection
+settings.
+
 ## Repository layout
 
 ```text
 __gateway-service/
-├── app.py                       # composition and explicit live registrations
+├── app.py                       # composition with automatic Provider discovery
 ├── run_server.py                # alternate server entrypoint
 ├── gateway/
 │   ├── contracts.py             # wire types, operations, and Provider models
@@ -78,10 +90,11 @@ default. Those tests need their declared external credentials/services and
 should be run separately when intentionally available. See
 [`docs/TESTING.md`](docs/TESTING.md) for test groups and commands.
 
-For a new Provider, follow `docs/ONBOARDING.md`: declare only support that has
-a real handler, register it explicitly, configure both routing and the
-name-based allowlist as needed, and test its Discovery and Runtime behavior.
-A new Provider for an existing Operation does not need an SDK-specific
-operation enum or schema. A genuinely new Operation is a Gateway contract
-change and requires shared implementation, tests, and documentation while the
-SDK remains generic.
+For a new Provider, follow `docs/ONBOARDING.md`: add a complete package under
+`providers/<slug>/`, declare only support that has a real handler, and test its
+Discovery and Runtime behavior. Gateway discovers it on startup; no app.py
+registration or per-Provider routing configuration is needed for
+`X-Provider-Name`. A new Provider for an existing Operation does not need an
+SDK-specific operation enum or schema. A genuinely new Operation is a Gateway
+contract change and requires shared implementation, tests, and documentation
+while the SDK remains generic.
