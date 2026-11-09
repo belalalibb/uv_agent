@@ -1,0 +1,47 @@
+[
+  {
+    "email": "f3kn76@vltmail.com",
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjozODU5OTk4MTA5Mjg2Mzk4MjMsImlhdCI6MTc5NDE3MjE4NSwiZXhwIjoxNzk2NzY0MTg1fQ.j5WniNBjrZVxTWGKYlIBShqJLhJ0tt6MErNm_u1wTRk",
+    "chat_uuid": "196df3a2-0cd2-45eb-acbd-74cbe716160a",
+    "provider": "tempmailclub",
+    "status": "active",
+    "created_at": "2026-11-08 23:09:46",
+    "expires_in_days": 365
+  },
+  {
+    "email": "ykicg0ab3@nux2.lxvsi.com",
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjozMDk4NzcyMzE2NDYxMzk2OTMsImlhdCI6MTc5NDE3MjE5MywiZXhwIjoxNzk2NzY0MTkzfQ._L7w5TikM_uttT3UaGUS00SGHH51k8NKqW78ZA6P4gk",
+    "chat_uuid": "0ffce4a2-343e-4a99-827f-ba151a4ea6dc",
+    "provider": "tempmailclub",
+    "status": "active",
+    "created_at": "2026-11-08 23:09:55",
+    "expires_in_days": 365
+  },
+  {
+    "email": "2mkoh4lbe30@anypsj.com",
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjozNzM1NDI2NDE1MjUyNTg0MDMsImlhdCI6MTc5NDE3MjIwNywiZXhwIjoxNzk2NzY0MjA3fQ.YcKnx2EB-g969YQYCwNUUXynzfCiA2xZ-spfjTlaf2w",
+    "chat_uuid": "78b70648-4654-4196-b9f0-3a50e66f621c",
+    "provider": "tempmailclub",
+    "status": "active",
+    "created_at": "2026-11-08 23:10:08",
+    "expires_in_days": 365
+  },
+  {
+    "email": "kd4q@flux.vltmail.com",
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjozNTUyNzM1ODcwNjI2MTMyMTMsImlhdCI6MTc5NDE3MjI1MiwiZXhwIjoxNzk2NzY0MjUyfQ.VRu-D8nBG6x-BUFr7qM-mVYMXkGlU39ZTLSnH-Rna0w",
+    "chat_uuid": "aaf4bd11-1cec-4033-a1aa-1918883fbacd",
+    "provider": "tempmailclub",
+    "status": "active",
+    "created_at": "2026-11-08 23:10:53",
+    "expires_in_days": 365
+  },
+  {
+    "email": "ncfrgd96wx0@hex7.rozxs.com",
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjozNzQ4NzM1ODg1NzU4ODMwMjMsImlhdCI6MTc5NDE3MjI2OCwiZXhwIjoxNzk2NzY0MjY4fQ.02Pq89fWKtCAHX31zr7oxwMmnCT_--coOgvFC3mivyA",
+    "chat_uuid": "94bf75d5-3208-4065-8a4e-1300351fed17",
+    "provider": "tempmailclub",
+    "status": "active",
+    "created_at": "2026-11-08 23:11:09",
+    "expires_in_days": 365
+  }
+]

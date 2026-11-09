@@ -1,0 +1,58 @@
+{
+  "gpt-5.6-luna": {
+    "ai_name": "gpt",
+    "label": "GPT-5.6 Luna",
+    "capabilities": {
+      "thinking": false,
+      "planning": false,
+      "deep_research": false,
+      "web_explorer": false,
+      "files": true,
+      "images": true,
+      "system_message": true,
+      "streaming": false
+    }
+  },
+  "glm-5.3-flash": {
+    "ai_name": "glm",
+    "label": "GLM-5.3 Flash",
+    "capabilities": {
+      "thinking": true,
+      "planning": false,
+      "deep_research": false,
+      "web_explorer": false,
+      "files": true,
+      "images": true,
+      "system_message": true,
+      "streaming": false
+    }
+  },
+  "deepseek-v4-flash": {
+    "ai_name": "deepseek",
+    "label": "DeepSeek V4 Flash",
+    "capabilities": {
+      "thinking": false,
+      "planning": false,
+      "deep_research": false,
+      "web_explorer": false,
+      "files": true,
+      "images": true,
+      "system_message": true,
+      "streaming": false
+    }
+  },
+  "tencent-hy3": {
+    "ai_name": "tencent",
+    "label": "Tencent Hunyuan 3",
+    "capabilities": {
+      "thinking": false,
+      "planning": false,
+      "deep_research": false,
+      "web_explorer": false,
+      "files": true,
+      "images": true,
+      "system_message": true,
+      "streaming": false
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "glm-5.3-flash": {
+    "id": "glm-5.3-flash",
+    "display_name": "Glm 5.3 Flash",
+    "vision": false,
+    "thinking": false,
+    "deep_research": false,
+    "web_search": false,
+    "context_window": 128000,
+    "pricing": {
+      "input": 0.0,
+      "output": 0.0
+    }
+  }
+}

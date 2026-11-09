@@ -1,0 +1,394 @@
+{
+  "claude-haiku-4-5-20251001": {
+    "ai_name": "claude",
+    "label": "Claude Haiku 4.5",
+    "capabilities": {
+      "thinking": true,
+      "planning": true,
+      "deep_research": true,
+      "web_explorer": true,
+      "files": true,
+      "images": true,
+      "system_message": true,
+      "streaming": true
+    }
+  },
+  "claude-opus-4-6": {
+    "ai_name": "claude",
+    "label": "Claude Opus 4.6",
+    "capabilities": {
+      "thinking": true,
+      "planning": true,
+      "deep_research": true,
+      "web_explorer": true,
+      "files": true,
+      "images": true,
+      "system_message": true,
+      "streaming": true
+    }
+  },
+  "claude-opus-4-7": {
+    "ai_name": "claude",
+    "label": "Claude Opus 4.7",
+    "capabilities": {
+      "thinking": true,
+      "planning": true,
+      "deep_research": true,
+      "web_explorer": true,
+      "files": true,
+      "images": true,
+      "system_message": true,
+      "streaming": true
+    }
+  },
+  "claude-opus-4-8": {
+    "ai_name": "claude",
+    "label": "Claude Opus 4.8",
+    "capabilities": {
+      "thinking": true,
+      "planning": true,
+      "deep_research": true,
+      "web_explorer": true,
+      "files": true,
+      "images": true,
+      "system_message": true,
+      "streaming": true
+    }
+  },
+  "claude-sonnet-4-6": {
+    "ai_name": "claude",
+    "label": "Claude Sonnet 4.6",
+    "capabilities": {
+      "thinking": true,
+      "planning": true,
+      "deep_research": true,
+      "web_explorer": true,
+      "files": true,
+      "images": true,
+      "system_message": true,
+      "streaming": true
+    }
+  },
+  "claude-sonnet-5": {
+    "ai_name": "claude",
+    "label": "Claude Sonnet 5",
+    "capabilities": {
+      "thinking": true,
+      "planning": true,
+      "deep_research": true,
+      "web_explorer": true,
+      "files": true,
+      "images": true,
+      "system_message": true,
+      "streaming": true
+    }
+  },
+  "qwen3-max-2026-01-23": {
+    "ai_name": "qwen",
+    "label": "Qwen 3 Max",
+    "capabilities": {
+      "thinking": true,
+      "planning": true,
+      "deep_research": true,
+      "web_explorer": true,
+      "files": true,
+      "images": false,
+      "system_message": true,
+      "streaming": true
+    }
+  },
+  "qwen3.7-max": {
+    "ai_name": "qwen",
+    "label": "Qwen 3.7 Max",
+    "capabilities": {
+      "thinking": true,
+      "planning": true,
+      "deep_research": true,
+      "web_explorer": true,
+      "files": true,
+      "images": false,
+      "system_message": true,
+      "streaming": true
+    }
+  },
+  "qwen3.7-plus": {
+    "ai_name": "qwen",
+    "label": "Qwen 3.7 Plus",
+    "capabilities": {
+      "thinking": true,
+      "planning": true,
+      "deep_research": true,
+      "web_explorer": true,
+      "files": true,
+      "images": false,
+      "system_message": true,
+      "streaming": true
+    }
+  },
+  "deepseek-r1": {
+    "ai_name": "deepseek",
+    "label": "DeepSeek R1",
+    "capabilities": {
+      "thinking": true,
+      "planning": false,
+      "deep_research": true,
+      "web_explorer": false,
+      "files": true,
+      "images": false,
+      "system_message": true,
+      "streaming": true
+    }
+  },
+  "deepseek-v3": {
+    "ai_name": "deepseek",
+    "label": "DeepSeek V3",
+    "capabilities": {
+      "thinking": false,
+      "planning": true,
+      "deep_research": true,
+      "web_explorer": true,
+      "files": true,
+      "images": false,
+      "system_message": true,
+      "streaming": true
+    }
+  },
+  "gemini-3.1-pro-preview": {
+    "ai_name": "gemini",
+    "label": "Gemini 3.1 Pro",
+    "capabilities": {
+      "thinking": true,
+      "planning": true,
+      "deep_research": true,
+      "web_explorer": true,
+      "files": true,
+      "images": true,
+      "system_message": true,
+      "streaming": true
+    }
+  },
+  "gemini-3.5-flash": {
+    "ai_name": "gemini",
+    "label": "Gemini 3.5 Flash",
+    "capabilities": {
+      "thinking": true,
+      "planning": true,
+      "deep_research": true,
+      "web_explorer": true,
+      "files": true,
+      "images": true,
+      "system_message": true,
+      "streaming": true
+    }
+  },
+  "gemini-3.5-flash-lite": {
+    "ai_name": "gemini",
+    "label": "Gemini 3.5 Flash Lite",
+    "capabilities": {
+      "thinking": true,
+      "planning": true,
+      "deep_research": true,
+      "web_explorer": true,
+      "files": true,
+      "images": true,
+      "system_message": true,
+      "streaming": true
+    }
+  },
+  "gemini-3.6-flash": {
+    "ai_name": "gemini",
+    "label": "Gemini 3.6 Flash",
+    "capabilities": {
+      "thinking": true,
+      "planning": true,
+      "deep_research": true,
+      "web_explorer": true,
+      "files": true,
+      "images": true,
+      "system_message": true,
+      "streaming": true
+    }
+  },
+  "gemini-3.7-flash": {
+    "ai_name": "gemini",
+    "label": "Gemini 3.7 Flash",
+    "capabilities": {
+      "thinking": true,
+      "planning": true,
+      "deep_research": true,
+      "web_explorer": true,
+      "files": true,
+      "images": true,
+      "system_message": true,
+      "streaming": true
+    }
+  },
+  "gemini-3.8-flash": {
+    "ai_name": "gemini",
+    "label": "Gemini 3.8 Flash",
+    "capabilities": {
+      "thinking": true,
+      "planning": true,
+      "deep_research": true,
+      "web_explorer": true,
+      "files": true,
+      "images": true,
+      "system_message": true,
+      "streaming": true
+    }
+  },
+  "gpt-5-mini-2025-08-07": {
+    "ai_name": "chatgpt",
+    "label": "GPT-5 Mini",
+    "capabilities": {
+      "thinking": true,
+      "planning": true,
+      "deep_research": true,
+      "web_explorer": true,
+      "files": true,
+      "images": true,
+      "system_message": true,
+      "streaming": true
+    }
+  },
+  "gpt-5-nano-2025-08-07": {
+    "ai_name": "chatgpt",
+    "label": "GPT-5 Nano",
+    "capabilities": {
+      "thinking": true,
+      "planning": true,
+      "deep_research": true,
+      "web_explorer": true,
+      "files": true,
+      "images": true,
+      "system_message": true,
+      "streaming": true
+    }
+  },
+  "gpt-5.4": {
+    "ai_name": "chatgpt",
+    "label": "GPT 5.4",
+    "capabilities": {
+      "thinking": true,
+      "planning": true,
+      "deep_research": true,
+      "web_explorer": true,
+      "files": true,
+      "images": true,
+      "system_message": true,
+      "streaming": true
+    }
+  },
+  "gpt-5.6-luna": {
+    "ai_name": "chatgpt",
+    "label": "GPT 5.6 Luna",
+    "capabilities": {
+      "thinking": true,
+      "planning": true,
+      "deep_research": true,
+      "web_explorer": true,
+      "files": true,
+      "images": true,
+      "system_message": true,
+      "streaming": true
+    }
+  },
+  "gpt-5.6-terra": {
+    "ai_name": "chatgpt",
+    "label": "GPT 5.6 Terra",
+    "capabilities": {
+      "thinking": true,
+      "planning": true,
+      "deep_research": true,
+      "web_explorer": true,
+      "files": true,
+      "images": true,
+      "system_message": true,
+      "streaming": true
+    }
+  },
+  "sonar": {
+    "ai_name": "perplexity",
+    "label": "Perplexity Sonar + Internet",
+    "capabilities": {
+      "thinking": false,
+      "planning": false,
+      "deep_research": false,
+      "web_explorer": false,
+      "files": true,
+      "images": false,
+      "system_message": true,
+      "streaming": true
+    }
+  },
+  "grok-4.6": {
+    "ai_name": "grok",
+    "label": "Grok 4.6",
+    "capabilities": {
+      "thinking": true,
+      "planning": true,
+      "deep_research": true,
+      "web_explorer": true,
+      "files": true,
+      "images": false,
+      "system_message": true,
+      "streaming": true
+    }
+  },
+  "grok-4": {
+    "ai_name": "grok",
+    "label": "Grok 4",
+    "capabilities": {
+      "thinking": true,
+      "planning": true,
+      "deep_research": true,
+      "web_explorer": true,
+      "files": true,
+      "images": true,
+      "system_message": true,
+      "streaming": true
+    }
+  },
+  "grok-4.3": {
+    "ai_name": "grok",
+    "label": "Grok 4.3",
+    "capabilities": {
+      "thinking": true,
+      "planning": true,
+      "deep_research": true,
+      "web_explorer": true,
+      "files": true,
+      "images": true,
+      "system_message": true,
+      "streaming": true
+    }
+  },
+  "grok-4.5": {
+    "ai_name": "grok",
+    "label": "Grok 4.5",
+    "capabilities": {
+      "thinking": true,
+      "planning": true,
+      "deep_research": true,
+      "web_explorer": true,
+      "files": true,
+      "images": true,
+      "system_message": true,
+      "streaming": true
+    }
+  },
+  "glm-5.2": {
+    "ai_name": "zai",
+    "label": "GLM 5.2",
+    "capabilities": {
+      "thinking": true,
+      "planning": true,
+      "deep_research": true,
+      "web_explorer": true,
+      "files": true,
+      "images": false,
+      "system_message": true,
+      "streaming": true
+    }
+  }
+}

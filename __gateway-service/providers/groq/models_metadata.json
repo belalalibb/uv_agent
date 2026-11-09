@@ -1,0 +1,19 @@
+{
+  "allam-2-7b": {
+    "label": "Allam 2 7B (Arabic Specialized LLM)",
+    "context_window": 4096,
+    "capabilities": {
+      "chat": true,
+      "reasoning": true
+    }
+  },
+  "llama-3.1-8b-instant": {
+    "label": "Llama 3.1 8B Instant (Ultra Fast Inference)",
+    "context_window": 131072,
+    "capabilities": {
+      "chat": true,
+      "reasoning": true,
+      "code": true
+    }
+  }
+}

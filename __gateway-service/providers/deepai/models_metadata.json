@@ -1,0 +1,198 @@
+{
+  "gpt-6-luna": {
+    "ai_name": "gpt",
+    "label": "GPT-6 Luna",
+    "capabilities": {
+      "thinking": false,
+      "planning": false,
+      "deep_research": false,
+      "web_explorer": false,
+      "files": true,
+      "images": true,
+      "system_message": true,
+      "streaming": false
+    }
+  },
+  "standard": {
+    "ai_name": "standard",
+    "label": "Standard",
+    "capabilities": {
+      "thinking": false,
+      "planning": false,
+      "deep_research": false,
+      "web_explorer": false,
+      "files": true,
+      "images": true,
+      "system_message": true,
+      "streaming": false
+    }
+  },
+  "glm-5.3-flash": {
+    "ai_name": "glm",
+    "label": "GLM 5.3 Flash",
+    "capabilities": {
+      "thinking": true,
+      "planning": false,
+      "deep_research": false,
+      "web_explorer": false,
+      "files": true,
+      "images": true,
+      "system_message": true,
+      "streaming": false
+    }
+  },
+  "qwen3.8-flash": {
+    "ai_name": "qwen",
+    "label": "Qwen 3.8 Flash",
+    "capabilities": {
+      "thinking": false,
+      "planning": false,
+      "deep_research": false,
+      "web_explorer": false,
+      "files": true,
+      "images": true,
+      "system_message": true,
+      "streaming": false
+    }
+  },
+  "deepseek-v4-flash": {
+    "ai_name": "deepseek",
+    "label": "DeepSeek V4 Flash",
+    "capabilities": {
+      "thinking": false,
+      "planning": false,
+      "deep_research": false,
+      "web_explorer": false,
+      "files": true,
+      "images": true,
+      "system_message": true,
+      "streaming": false
+    }
+  },
+  "deepseek-v3.2": {
+    "ai_name": "deepseek",
+    "label": "DeepSeek V3.2",
+    "capabilities": {
+      "thinking": false,
+      "planning": false,
+      "deep_research": false,
+      "web_explorer": false,
+      "files": true,
+      "images": false,
+      "system_message": true,
+      "streaming": false
+    }
+  },
+  "gpt-5.6-luna": {
+    "ai_name": "gpt",
+    "label": "GPT-5.6 Luna",
+    "capabilities": {
+      "thinking": false,
+      "planning": false,
+      "deep_research": false,
+      "web_explorer": false,
+      "files": true,
+      "images": true,
+      "system_message": true,
+      "streaming": false
+    }
+  },
+  "tencent-hy3": {
+    "ai_name": "tencent",
+    "label": "Tencent Hy3",
+    "capabilities": {
+      "thinking": false,
+      "planning": false,
+      "deep_research": false,
+      "web_explorer": false,
+      "files": true,
+      "images": false,
+      "system_message": true,
+      "streaming": false
+    }
+  },
+  "gpt-oss-120b": {
+    "ai_name": "gpt",
+    "label": "GPT OSS 120B",
+    "capabilities": {
+      "thinking": true,
+      "planning": false,
+      "deep_research": false,
+      "web_explorer": false,
+      "files": true,
+      "images": false,
+      "system_message": true,
+      "streaming": false
+    }
+  },
+  "gemma-4": {
+    "ai_name": "gemma",
+    "label": "Gemma 4",
+    "capabilities": {
+      "thinking": false,
+      "planning": false,
+      "deep_research": false,
+      "web_explorer": false,
+      "files": true,
+      "images": true,
+      "system_message": true,
+      "streaming": false
+    }
+  },
+  "llama-3.3-70b-instruct": {
+    "ai_name": "llama",
+    "label": "Llama 3.3 70B Instruct",
+    "capabilities": {
+      "thinking": false,
+      "planning": false,
+      "deep_research": false,
+      "web_explorer": false,
+      "files": true,
+      "images": false,
+      "system_message": true,
+      "streaming": false
+    }
+  },
+  "llama-3.1-8b-instant": {
+    "ai_name": "llama",
+    "label": "Llama 3.1 8B Instant",
+    "capabilities": {
+      "thinking": false,
+      "planning": false,
+      "deep_research": false,
+      "web_explorer": false,
+      "files": true,
+      "images": false,
+      "system_message": true,
+      "streaming": false
+    }
+  },
+  "gpt-4o-mini": {
+    "ai_name": "gpt",
+    "label": "GPT-4o mini",
+    "capabilities": {
+      "thinking": false,
+      "planning": false,
+      "deep_research": false,
+      "web_explorer": false,
+      "files": true,
+      "images": true,
+      "system_message": true,
+      "streaming": false
+    }
+  },
+  "gemini-2.5-flash-lite": {
+    "ai_name": "gemini",
+    "label": "Gemini 2.5 Flash Lite",
+    "capabilities": {
+      "thinking": false,
+      "planning": false,
+      "deep_research": false,
+      "web_explorer": false,
+      "files": true,
+      "images": true,
+      "system_message": true,
+      "streaming": false
+    }
+  }
+}

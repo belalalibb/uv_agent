@@ -1,0 +1,42 @@
+{
+  "claude-fable-5-1": {
+    "label": "Claude Fable 5.1",
+    "context_window": 200000,
+    "description": "المفكر العميق • تحليل فلسفي وبرمجي فائق 🧠"
+  },
+  "gpt-6-astra": {
+    "label": "GPT-6 Astra",
+    "context_window": 128000,
+    "description": "النموذج الشامل الأقوى • استجابة خارقة 🌟"
+  },
+  "deepseek-flash": {
+    "label": "DeepSeek V4.1 Flash",
+    "context_window": 64000,
+    "description": "افتراضي • تفكير قوي وسريع • موفر للكريديت ⚡"
+  },
+  "gemini-3.8-flash": {
+    "label": "Gemini 3.8 Flash",
+    "context_window": 1000000,
+    "description": "سرعة فائقة واستنتاج عملي موصى به 💎"
+  },
+  "kimi-k3": {
+    "label": "Kimi K3",
+    "context_window": 200000,
+    "description": "سياق ضخم للمهام الطويلة والمعقدة 📚"
+  },
+  "grok-4.6": {
+    "label": "Grok 4.6",
+    "context_window": 131072,
+    "description": "إجابات عصرية وواقعية سريعة 🚀"
+  },
+  "gpt-5-6-luna": {
+    "label": "GPT-5.6 Luna",
+    "context_window": 32000,
+    "description": "خفيف وذكي للمهام اليومية 🌙"
+  },
+  "auto": {
+    "label": "YouMind Auto Router",
+    "context_window": 128000,
+    "description": "الموجه الذكي التلقائي لمنصة YouMind 🤖"
+  }
+}
